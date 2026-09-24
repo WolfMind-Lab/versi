@@ -172,5 +172,5 @@ app.get("/api/users/:username",auth,(req,res)=>{
  const following=db.prepare("SELECT COUNT(*) n FROM follows WHERE follower_id=?").get(u.id).n;
  res.json({...u,followers,following,followed:!!db.prepare("SELECT 1 FROM follows WHERE follower_id=? AND following_id=?").get(req.user.id,u.id),poems});
 });
-app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
+app.get("/{*splat}",(req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
 app.listen(process.env.PORT||3000,()=>console.log("VERSI avviato su http://localhost:"+(process.env.PORT||3000)));
