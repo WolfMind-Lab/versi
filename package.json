@@ -1,0 +1,8 @@
+{
+  "name": "versi-social-poetico",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"dev":"node server.js","start":"node server.js"},
+  "dependencies": {"better-sqlite3":"^11.8.1","bcryptjs":"^2.4.3","express":"^5.1.0","jsonwebtoken":"^9.0.2"}
+}
