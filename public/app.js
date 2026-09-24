@@ -1,42 +1,992 @@
-const root=document.querySelector("#app");
-let token=localStorage.getItem("versi_token"),me=null,mood="",timer;
-const moods=["Tutte","Amore","Nostalgia","Solitudine","Rinascita","Felicità","Dolore","Libertà"];
-async function api(url,opt={}){opt.headers={...(opt.headers||{}), "Content-Type":"application/json",...(token?{Authorization:"Bearer "+token}:{})};let r=await fetch(url,opt),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Errore");return d}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]))}
-function toast(s){let x=document.createElement("div");x.className="toast show";x.textContent=s;document.body.append(x);setTimeout(()=>x.remove(),1700)}
-function auth(){if(!token){renderAuth();return false}return true}
-async function boot(){if(!token){renderAuth();return}try{me=await api("/api/me");renderApp();loadFeed()}catch{localStorage.removeItem("versi_token");token=null;renderAuth()}}
-function renderAuth(){root.innerHTML=`<main class="auth"><div class="logo">VERSI</div><h1>Le parole che<br>restano.</h1><p>Un social dedicato alla poesia. Scegli se vuoi scrivere o leggere.</p><div id="loginBox"><input id="identifier" placeholder="Email o username"><input id="password" type="password" placeholder="Password"><button class="primary" onclick="login()">Accedi</button><button class="secondary" onclick="showRegister()">Crea account</button></div><div id="registerBox" style="display:none"><input id="rname" placeholder="Nome visualizzato"><input id="ruser" placeholder="Username"><input id="remail" type="email" placeholder="Email"><input id="rpass" type="password" placeholder="Password (min. 8 caratteri)"><div class="roles"><button id="rw" class="role" onclick="pickRole('writer')">✍️ <b>Scrittore</b><br><small>Pubblica poesie</small></button><button id="rr" class="role" onclick="pickRole('reader')">📖 <b>Lettore</b><br><small>Scopri e salva</small></button></div><button class="primary" style="margin-top:10px" onclick="register()">Registrati</button><button class="secondary" onclick="showLogin()">Ho già un account</button></div></main>`}
-let chosenRole="reader";function pickRole(r){chosenRole=r;rw.classList.toggle("sel",r==="writer");rr.classList.toggle("sel",r==="reader")}
-function showRegister(){loginBox.style.display="none";registerBox.style.display="block";pickRole("reader")}
-function showLogin(){loginBox.style.display="block";registerBox.style.display="none"}
-async function login(){try{let d=await api("/api/login",{method:"POST",body:JSON.stringify({identifier:identifier.value,password:password.value})});token=d.token;localStorage.setItem("versi_token",token);me=d.user;renderApp();loadFeed()}catch(e){toast(e.message)}}
-async function register(){try{let d=await api("/api/register",{method:"POST",body:JSON.stringify({displayName:rname.value,username:ruser.value,email:remail.value,password:rpass.value,role:chosenRole})});token=d.token;localStorage.setItem("versi_token",token);me=d.user;renderApp();loadFeed()}catch(e){toast(e.message)}}
-function renderApp(){root.innerHTML=`<div class="app"><header><button class="icon" onclick="go('discover')">⌕</button><div class="logo">VERSI</div><button class="icon" onclick="go('activity')">♡</button></header>
-<section id="home" class="screen active"><div class="pad"><div class="hero"><h1>Cosa senti oggi?</h1><p>Trova le parole che assomigliano a ciò che provi.</p></div><div id="chips" class="chips"></div><div id="feed"></div></div></section>
-<section id="discover" class="screen"><div class="pad"><div class="search">⌕ <input id="search" oninput="loadDiscover()" placeholder="Cerca poesie, autori, parole..."></div><h2 style="font-family:Georgia;margin-top:22px">Scopri</h2><div class="grid"><div class="tile" onclick="setMood('Amore')">❤️ <b>Amore</b><small>Parole del cuore</small></div><div class="tile" onclick="setMood('Nostalgia')">🌙 <b>Nostalgia</b><small>Ciò che manca</small></div><div class="tile" onclick="setMood('Rinascita')">🌱 <b>Rinascita</b><small>Ricominciarsi</small></div><div class="tile" onclick="setMood('Solitudine')">🖤 <b>Solitudine</b><small>Quando pesa</small></div></div><div id="discoverResults"></div></div></section>
-<section id="create" class="screen"><div class="pad"><h2 style="font-family:Georgia">Crea</h2><div class="card"><h3>✍️ Nuova poesia</h3><p class="tiny">Pubblica qualcosa di tuo.</p><button class="primary" onclick="openEditor()">Apri editor</button></div><div class="card"><h3>🎯 Sfida del giorno</h3><p>pioggia · telefono · addio</p><button class="secondary" onclick="openEditor('Sfida: pioggia, telefono, addio')">Partecipa</button></div></div></section>
-<section id="activity" class="screen"><div class="pad"><h2 style="font-family:Georgia">Attività</h2><div id="activities"></div></div></section>
-<section id="profile" class="screen"><div class="pad"><div class="card"><div class="head"><div class="avatar">${esc((me?.display_name||"V")[0])}</div><div class="grow"><h2 style="font-family:Georgia;margin:0">${esc(me?.display_name||"Profilo")}</h2><div class="tiny">@${esc(me?.username||"")}</div></div><button class="secondary" style="width:auto;margin:0" onclick="logout()">Esci</button></div><p>${esc(me?.bio||"Scrivo ciò che non riesco a dire.")}</p><div class="tiny">Ruolo: ${me?.role==="writer"?"Scrittore":"Lettore"}</div></div><div id="myProfile"></div></div></section>
-<nav class="bottom"><button class="nav active" onclick="go('home')"><b>⌂</b>Home</button><button class="nav" onclick="go('discover')"><b>⌕</b>Scopri</button><button class="plus" onclick="openEditor()">＋</button><button class="nav" onclick="go('activity')"><b>♡</b>Attività</button><button class="nav" onclick="go('profile')"><b>◯</b>Profilo</button></nav></div>
-<div id="editor" class="modal"><div class="sheet"><button class="close" onclick="closeM('editor')">×</button><h2 style="font-family:Georgia">Nuova poesia</h2><div class="field"><label>TITOLO</label><input id="pt"></div><div class="field"><label>TESTO</label><textarea id="pb"></textarea></div><div class="field"><label>EMOZIONE</label><select id="pm">${moods.filter(x=>x!=="Tutte").map(x=>`<option>${x}</option>`).join("")}</select></div><div class="field"><label>VISIBILITÀ</label><select id="pv"><option value="public">Pubblica per tutti</option><option value="followers">Solo follower</option><option value="private">Privata</option></select></div><button class="primary" onclick="publish()">Pubblica poesia</button></div></div>
-<div id="comments" class="modal"><div class="sheet"><button class="close" onclick="closeM('comments')">×</button><h2 style="font-family:Georgia">Commenti</h2><div id="commentList"></div><div style="display:flex;gap:7px"><input id="commentText" style="flex:1;border:1px solid #e8dfe8;border-radius:15px;padding:12px"><button class="primary" style="width:auto" onclick="comment()">Invia</button></div></div></div>`;renderChips();loadProfile()}
-function renderChips(){chips.innerHTML=moods.map(x=>`<button class="chip ${x===mood||(!mood&&x==="Tutte")?"on":""}" onclick="setMood('${x}')">${x}</button>`).join("")}
-function setMood(x){mood=x==="Tutte"?"":x;renderChips();loadFeed()}
-async function loadFeed(){try{let a=await api("/api/poems?mood="+encodeURIComponent(mood));feed.innerHTML=a.map(card).join("")||'<div class="card">Nessuna poesia trovata.</div>'}catch(e){toast(e.message)}}
-function card(p){return `<article class="poem"><div class="head"><div class="avatar">${esc(p.display_name[0])}</div><div class="grow"><b>${esc(p.display_name)}</b><div class="tiny">@${esc(p.username)}</div></div>${p.user_id!==me.id?`<button class="follow ${p.following?"following":""}" onclick="follow(${p.user_id})">${p.following?"Segui già":"Segui"}</button>`:""}</div><h2>${esc(p.title)}</h2><div class="text">${esc(p.body)}</div><div class="tiny" style="margin-top:12px">${esc(p.mood)}</div><div class="actions"><button class="action ${p.liked?"on":""}" onclick="like(${p.id})">♡ ${p.likes}</button><button class="action" onclick="openComments(${p.id})">💬 ${p.comments}</button><button class="action ${p.saved?"on":""}" onclick="save(${p.id})">🔖 ${p.saves}</button><button class="action" onclick="share()">↗</button></div></article>`}
-async function like(id){await api("/api/poems/"+id+"/like",{method:"POST"});loadFeed();if(document.getElementById("discover").classList.contains("active"))loadDiscover()}
-async function save(id){await api("/api/poems/"+id+"/save",{method:"POST"});loadFeed();toast("Biblioteca aggiornata")}
-async function follow(id){await api("/api/users/"+id+"/follow",{method:"POST"});loadFeed();toast("Seguito aggiornato")}
-async function loadDiscover(){let q=encodeURIComponent(search.value||"");let a=await api("/api/poems?q="+q+"&mood="+encodeURIComponent(mood));discoverResults.innerHTML=a.map(card).join("")||'<div class="card">Nessun risultato.</div>'}
-async function openComments(id){window.commentPoem=id;commentList.innerHTML=(await api("/api/poems/"+id+"/comments")).map(c=>`<div class="card"><b>${esc(c.display_name)}</b><p>${esc(c.body)}</p></div>`).join("")||'<p class="tiny">Ancora nessun commento.</p>';comments.classList.add("open")}
-async function comment(){let v=commentText.value.trim();if(!v)return;await api("/api/poems/"+commentPoem+"/comments",{method:"POST",body:JSON.stringify({body:v})});commentText.value="";openComments(commentPoem)}
-async function openEditor(pref=""){editor.classList.add("open");pt.value=pref;pb.value=""}
-async function publish(){if(!pt.value.trim()||!pb.value.trim())return toast("Completa titolo e testo");try{await api("/api/poems",{method:"POST",body:JSON.stringify({title:pt.value,body:pb.value,mood:pm.value,visibility:pv.value})});closeM("editor");pt.value="";pb.value="";toast("Poesia pubblicata ✨");go("home")}catch(e){toast(e.message)}}
-async function loadProfile(){if(!me)return;let u=await api("/api/users/"+encodeURIComponent(me.username));myProfile.innerHTML=`<div class="card"><b>${u.poems.length}</b> poesie · <b>${u.followers}</b> follower · <b>${u.following}</b> seguiti</div>${u.poems.map(card).join("")}`;}
-async function loadActivity(){let a=await api("/api/notifications");activities.innerHTML=a.map(n=>`<div class="card">🔔 <b>${esc(n.display_name||"VERSI")}</b> ${n.type==="follow"?"ha iniziato a seguirti.":"ha interagito con una tua poesia."}</div>`).join("")||'<div class="card tiny">Nessuna nuova attività.</div>'}
-function go(id){document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));let i={home:0,discover:1,activity:3,profile:4}[id];if(i!=null)document.querySelectorAll(".nav")[i].classList.add("active");if(id==="discover")loadDiscover();if(id==="activity")loadActivity();if(id==="profile")loadProfile()}
-function closeM(id){document.getElementById(id).classList.remove("open")}
-function share(){navigator.clipboard?.writeText(location.href);toast("Link copiato")}
-function logout(){localStorage.removeItem("versi_token");token=null;renderAuth()}
-boot();
+const API = "/api";
+
+let token = localStorage.getItem("versi_token");
+let currentUser = null;
+let currentMood = "";
+
+const $ = (id) => document.getElementById(id);
+
+function show(id) {
+  $(id)?.classList.remove("hidden");
+}
+
+function hide(id) {
+  $(id)?.classList.add("hidden");
+}
+
+function message(id, text, error = false) {
+  const el = $(id);
+  if (!el) return;
+
+  el.textContent = text;
+  el.className = `message ${error ? "error" : "success"}`;
+
+  setTimeout(() => {
+    el.textContent = "";
+    el.className = "message";
+  }, 3500);
+}
+
+async function api(url, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(API + url, {
+    ...options,
+    headers
+  });
+
+  let data = {};
+
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error || "Si è verificato un errore.");
+  }
+
+  return data;
+}
+
+
+/* =========================
+   AUTENTICAZIONE
+========================= */
+
+function setAuthenticated(data) {
+  token = data.token;
+  currentUser = data.user;
+
+  localStorage.setItem("versi_token", token);
+
+  hide("auth-screen");
+  show("app");
+
+  loadHome();
+  loadProfile();
+}
+
+function logout() {
+  token = null;
+  currentUser = null;
+
+  localStorage.removeItem("versi_token");
+
+  hide("app");
+  show("auth-screen");
+
+  $("login-password").value = "";
+}
+
+
+/* LOGIN */
+
+$("login-btn")?.addEventListener("click", async () => {
+  const identifier = $("login-identifier").value.trim();
+  const password = $("login-password").value;
+
+  if (!identifier || !password) {
+    message("auth-message", "Inserisci username/email e password.", true);
+    return;
+  }
+
+  try {
+    const data = await api("/login", {
+      method: "POST",
+      body: JSON.stringify({
+        identifier,
+        password
+      })
+    });
+
+    setAuthenticated(data);
+
+  } catch (error) {
+    message("auth-message", error.message, true);
+  }
+});
+
+
+/* REGISTRAZIONE */
+
+$("register-btn")?.addEventListener("click", async () => {
+
+  const displayName = $("register-display").value.trim();
+  const username = $("register-username").value.trim();
+  const email = $("register-email").value.trim();
+  const password = $("register-password").value;
+
+  const role =
+    document.querySelector('input[name="role"]:checked')?.value ||
+    "reader";
+
+  if (!displayName || !username || !email || !password) {
+    message(
+      "auth-message",
+      "Compila tutti i campi.",
+      true
+    );
+    return;
+  }
+
+  try {
+
+    const data = await api("/register", {
+      method: "POST",
+      body: JSON.stringify({
+        displayName,
+        username,
+        email,
+        password,
+        role
+      })
+    });
+
+    setAuthenticated(data);
+
+  } catch (error) {
+    message("auth-message", error.message, true);
+  }
+});
+
+
+/* CAMBIO LOGIN / REGISTRAZIONE */
+
+$("show-register")?.addEventListener("click", () => {
+  hide("login-box");
+  show("register-box");
+});
+
+$("show-login")?.addEventListener("click", () => {
+  hide("register-box");
+  show("login-box");
+});
+
+$("logout-btn")?.addEventListener("click", logout);
+
+
+/* =========================
+   NAVIGAZIONE
+========================= */
+
+document.querySelectorAll(".nav-btn").forEach(button => {
+
+  button.addEventListener("click", () => {
+
+    const viewId = button.dataset.view;
+
+    document.querySelectorAll(".view").forEach(view => {
+      view.classList.remove("active");
+    });
+
+    $(viewId)?.classList.add("active");
+
+    document.querySelectorAll(".nav-btn").forEach(btn => {
+      btn.classList.remove("active");
+    });
+
+    button.classList.add("active");
+
+    if (viewId === "home-view") {
+      loadHome();
+    }
+
+    if (viewId === "profile-view") {
+      loadProfile();
+    }
+
+    if (viewId === "notifications-view") {
+      loadNotifications();
+    }
+
+  });
+
+});
+
+
+/* =========================
+   FEED
+========================= */
+
+async function loadHome() {
+
+  const feed = $("feed");
+
+  if (!feed) return;
+
+  feed.innerHTML = `
+    <div class="loading">
+      Sto cercando parole per te...
+    </div>
+  `;
+
+  try {
+
+    const query =
+      currentMood
+        ? `?mood=${encodeURIComponent(currentMood)}`
+        : "";
+
+    const poems = await api(`/poems${query}`);
+
+    renderPoems(feed, poems);
+
+  } catch (error) {
+
+    feed.innerHTML = `
+      <div class="empty">
+        <h3>Non riesco a caricare le poesie.</h3>
+        <p>${escapeHTML(error.message)}</p>
+      </div>
+    `;
+
+  }
+}
+
+
+/* FILTRI EMOZIONI */
+
+document.querySelectorAll(".mood").forEach(button => {
+
+  button.addEventListener("click", () => {
+
+    document.querySelectorAll(".mood").forEach(btn => {
+      btn.classList.remove("active");
+    });
+
+    button.classList.add("active");
+
+    currentMood = button.dataset.mood || "";
+
+    loadHome();
+  });
+
+});
+
+
+/* =========================
+   RENDER POESIE
+========================= */
+
+function renderPoems(container, poems) {
+
+  container.innerHTML = "";
+
+  if (!poems.length) {
+
+    container.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">♡</div>
+        <h3>Ancora nessun verso.</h3>
+        <p>
+          Potrebbe essere il momento giusto
+          per scriverne uno.
+        </p>
+      </div>
+    `;
+
+    return;
+  }
+
+  poems.forEach(poem => {
+
+    const template = $("poem-template");
+
+    if (!template) return;
+
+    const card =
+      template.content.cloneNode(true);
+
+    const article =
+      card.querySelector(".poem-card");
+
+    article.dataset.id = poem.id;
+
+    const avatar =
+      card.querySelector(".avatar");
+
+    avatar.textContent =
+      (poem.display_name || poem.username || "?")
+        .charAt(0)
+        .toUpperCase();
+
+    card.querySelector(".author-name").textContent =
+      poem.display_name;
+
+    card.querySelector(".author-username").textContent =
+      "@" + poem.username;
+
+    card.querySelector(".poem-mood").textContent =
+      poem.mood;
+
+    card.querySelector(".poem-title").textContent =
+      poem.title;
+
+    card.querySelector(".poem-body").textContent =
+      poem.body;
+
+    card.querySelector(".like-count").textContent =
+      poem.likes || 0;
+
+    card.querySelector(".comment-count").textContent =
+      poem.comments || 0;
+
+    card.querySelector(".save-count").textContent =
+      poem.saves || 0;
+
+
+    /* LIKE */
+
+    const likeButton =
+      card.querySelector(".like-btn");
+
+    if (poem.liked) {
+      likeButton.classList.add("active");
+      likeButton.firstChild.textContent = "♥ ";
+    }
+
+    likeButton.addEventListener("click", async () => {
+
+      try {
+
+        const updated =
+          await api(`/poems/${poem.id}/like`, {
+            method: "POST"
+          });
+
+        likeButton.classList.toggle(
+          "active",
+          updated.liked
+        );
+
+        likeButton.firstChild.textContent =
+          updated.liked ? "♥ " : "♡ ";
+
+        likeButton.querySelector(
+          ".like-count"
+        ).textContent = updated.likes;
+
+      } catch (error) {
+        alert(error.message);
+      }
+
+    });
+
+
+    /* SALVA */
+
+    const saveButton =
+      card.querySelector(".save-btn");
+
+    if (poem.saved) {
+      saveButton.classList.add("active");
+    }
+
+    saveButton.addEventListener("click", async () => {
+
+      try {
+
+        const updated =
+          await api(`/poems/${poem.id}/save`, {
+            method: "POST"
+          });
+
+        saveButton.classList.toggle(
+          "active",
+          updated.saved
+        );
+
+        saveButton.querySelector(
+          ".save-count"
+        ).textContent = updated.saves;
+
+      } catch (error) {
+        alert(error.message);
+      }
+
+    });
+
+
+    /* FOLLOW */
+
+    const followButton =
+      card.querySelector(".follow-btn");
+
+    if (poem.user_id === currentUser?.id) {
+
+      followButton.style.display = "none";
+
+    } else {
+
+      if (poem.following) {
+        followButton.textContent = "Segui già";
+        followButton.classList.add("following");
+      }
+
+      followButton.addEventListener("click", async () => {
+
+        try {
+
+          const result =
+            await api(`/users/${poem.user_id}/follow`, {
+              method: "POST"
+            });
+
+          followButton.textContent =
+            result.following
+              ? "Segui già"
+              : "Segui";
+
+          followButton.classList.toggle(
+            "following",
+            result.following
+          );
+
+        } catch (error) {
+          alert(error.message);
+        }
+
+      });
+
+    }
+
+
+    /* COMMENTI */
+
+    const commentButton =
+      card.querySelector(".comment-btn");
+
+    const commentsBox =
+      card.querySelector(".comments");
+
+    commentButton.addEventListener("click", async () => {
+
+      commentsBox.classList.toggle("hidden");
+
+      if (!commentsBox.classList.contains("hidden")) {
+        await loadComments(
+          poem.id,
+          commentsBox
+        );
+      }
+
+    });
+
+
+    const commentForm =
+      card.querySelector(".comment-form");
+
+    commentForm.addEventListener("submit", async event => {
+
+      event.preventDefault();
+
+      const input =
+        commentForm.querySelector("input");
+
+      const body =
+        input.value.trim();
+
+      if (!body) return;
+
+      try {
+
+        await api(`/poems/${poem.id}/comments`, {
+          method: "POST",
+          body: JSON.stringify({ body })
+        });
+
+        input.value = "";
+
+        await loadComments(
+          poem.id,
+          commentsBox
+        );
+
+        const count =
+          commentsBox
+            .closest(".poem-card")
+            .querySelector(".comment-count");
+
+        count.textContent =
+          Number(count.textContent) + 1;
+
+      } catch (error) {
+        alert(error.message);
+      }
+
+    });
+
+
+    container.appendChild(card);
+
+  });
+
+}
+
+
+/* =========================
+   COMMENTI
+========================= */
+
+async function loadComments(poemId, box) {
+
+  const list =
+    box.querySelector(".comments-list");
+
+  list.innerHTML = `
+    <div class="loading-small">
+      Caricamento...
+    </div>
+  `;
+
+  try {
+
+    const comments =
+      await api(`/poems/${poemId}/comments`);
+
+    list.innerHTML = "";
+
+    if (!comments.length) {
+
+      list.innerHTML = `
+        <p class="no-comments">
+          Ancora nessun commento.
+        </p>
+      `;
+
+      return;
+    }
+
+    comments.forEach(comment => {
+
+      const item =
+        document.createElement("div");
+
+      item.className = "comment";
+
+      item.innerHTML = `
+        <strong>${escapeHTML(comment.display_name)}</strong>
+        <p>${escapeHTML(comment.body)}</p>
+      `;
+
+      list.appendChild(item);
+
+    });
+
+  } catch (error) {
+
+    list.innerHTML = `
+      <p class="error">${escapeHTML(error.message)}</p>
+    `;
+
+  }
+
+}
+
+
+/* =========================
+   PUBBLICAZIONE
+========================= */
+
+$("poem-form")?.addEventListener(
+  "submit",
+  async event => {
+
+    event.preventDefault();
+
+    const title =
+      $("poem-title").value.trim();
+
+    const body =
+      $("poem-body").value.trim();
+
+    const mood =
+      $("poem-mood").value;
+
+    const visibility =
+      $("poem-visibility").value;
+
+    if (!title || !body || !mood) {
+
+      message(
+        "poem-message",
+        "Inserisci titolo, testo ed emozione.",
+        true
+      );
+
+      return;
+    }
+
+    try {
+
+      await api("/poems", {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          body,
+          mood,
+          visibility
+        })
+      });
+
+      $("poem-form").reset();
+
+      message(
+        "poem-message",
+        "La tua poesia è stata pubblicata."
+      );
+
+      setTimeout(() => {
+
+        document
+          .querySelector('[data-view="home-view"]')
+          ?.click();
+
+      }, 800);
+
+    } catch (error) {
+
+      message(
+        "poem-message",
+        error.message,
+        true
+      );
+
+    }
+
+  }
+);
+
+
+/* =========================
+   RICERCA
+========================= */
+
+$("search-btn")?.addEventListener(
+  "click",
+  search
+);
+
+$("search-input")?.addEventListener(
+  "keydown",
+  event => {
+
+    if (event.key === "Enter") {
+      search();
+    }
+
+  }
+);
+
+
+async function search() {
+
+  const input =
+    $("search-input");
+
+  const value =
+    input.value.trim();
+
+  const container =
+    $("discover-results");
+
+  if (!value) {
+
+    container.innerHTML = `
+      <div class="empty">
+        <h3>Cosa stai cercando?</h3>
+        <p>
+          Cerca una parola, un titolo
+          o il nome di un autore.
+        </p>
+      </div>
+    `;
+
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="loading">
+      Sto cercando...
+    </div>
+  `;
+
+  try {
+
+    const poems =
+      await api(
+        `/poems?q=${encodeURIComponent(value)}`
+      );
+
+    renderPoems(container, poems);
+
+  } catch (error) {
+
+    container.innerHTML = `
+      <div class="empty">
+        <p>${escapeHTML(error.message)}</p>
+      </div>
+    `;
+
+  }
+
+}
+
+
+/* =========================
+   PROFILO
+========================= */
+
+async function loadProfile() {
+
+  if (!currentUser) return;
+
+  const container =
+    $("profile-content");
+
+  container.innerHTML = `
+    <div class="loading">
+      Caricamento profilo...
+    </div>
+  `;
+
+  try {
+
+    const profile =
+      await api(
+        `/users/${encodeURIComponent(currentUser.username)}`
+      );
+
+    container.innerHTML = `
+      <div class="profile-header">
+
+        <div class="profile-avatar">
+          ${escapeHTML(
+            profile.display_name.charAt(0).toUpperCase()
+          )}
+        </div>
+
+        <h1>${escapeHTML(profile.display_name)}</h1>
+
+        <p class="profile-username">
+          @${escapeHTML(profile.username)}
+        </p>
+
+        <span class="profile-role">
+          ${
+            profile.role === "writer"
+              ? "✍️ Scrittore"
+              : "📖 Lettore"
+          }
+        </span>
+
+        <p class="profile-bio">
+          ${escapeHTML(profile.bio || "Ancora nessuna biografia.")}
+        </p>
+
+        <div class="profile-stats">
+
+          <div>
+            <strong>${profile.poems.length}</strong>
+            <span>Poesie</span>
+          </div>
+
+          <div>
+            <strong>${profile.followers}</strong>
+            <span>Follower</span>
+          </div>
+
+          <div>
+            <strong>${profile.following}</strong>
+            <span>Seguiti</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="profile-poems">
+        <h2>Le mie poesie</h2>
+        <div id="my-poems" class="feed"></div>
+      </div>
+    `;
+
+    renderPoems(
+      $("my-poems"),
+      profile.poems
+    );
+
+  } catch (error) {
+
+    container.innerHTML = `
+      <div class="empty">
+        <p>${escapeHTML(error.message)}</p>
+      </div>
+    `;
+
+  }
+
+}
+
+
+/* =========================
+   NOTIFICHE
+========================= */
+
+$("notification-btn")?.addEventListener(
+  "click",
+  () => {
+    document
+      .querySelector('[data-view="notifications-view"]')
+      ?.click();
+  }
+);
+
+
+async function loadNotifications() {
+
+  const list =
+    $("notifications-list");
+
+  if (!list) return;
+
+  list.innerHTML = `
+    <div class="loading">
+      Caricamento...
+    </div>
+  `;
+
+  try {
+
+    const notifications =
+      await api("/notifications");
+
+    list.innerHTML = "";
+
+    if (!notifications.length) {
+
+      list.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">♡</div>
+          <h3>Nessuna attività.</h3>
+          <p>
+            Quando qualcuno interagirà
+            con te, apparirà qui.
+          </p>
+        </div>
+      `;
+
+      return;
+    }
+
+    notifications.forEach(notification => {
+
+      const item =
+        document.createElement("div");
+
+      item.className = "notification";
+
+      let text = "ha interagito con te.";
+
+      if (notification.type === "follow") {
+        text = "ha iniziato a seguirti.";
+      }
+
+      if (notification.type === "comment") {
+        text = "ha commentato una tua poesia.";
+      }
+
+      item.innerHTML = `
+        <div class="notification-avatar">
+          ${escapeHTML(
+            (notification.display_name || "?")
+              .charAt(0)
+              .toUpperCase()
+          )}
+        </div>
+
+        <div>
+          <strong>
+            ${escapeHTML(
+              notification.display_name || "Qualcuno"
+            )}
+          </strong>
+
+          <p>${text}</p>
+        </div>
+      `;
+
+      list.appendChild(item);
+
+    });
+
+  } catch (error) {
+
+    list.innerHTML = `
+      <div class="empty">
+        <p>${escapeHTML(error.message)}</p>
+      </div>
+    `;
+
+  }
+
+}
+
+
+/* =========================
+   UTILITY
+========================= */
+
+function escapeHTML(value) {
+
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
+/* =========================
+   AVVIO
+========================= */
+
+async function init() {
+
+  if (!token) {
+    show("auth-screen");
+    hide("app");
+    return;
+  }
+
+  try {
+
+    currentUser =
+      await api("/me");
+
+    hide("auth-screen");
+    show("app");
+
+    await loadHome();
+    await loadProfile();
+
+  } catch {
+
+    logout();
+
+  }
+
+}
+
+init();
