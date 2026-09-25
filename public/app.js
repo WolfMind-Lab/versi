@@ -1096,7 +1096,9 @@ function renderApp() {
 
         <button
           class="nav active"
+          data-target="home"
           onclick="go('home')"
+          aria-current="page"
         >
           <span>⌂</span>
           <small>Home</small>
@@ -1104,6 +1106,7 @@ function renderApp() {
 
         <button
           class="nav"
+          data-target="discover"
           onclick="go('discover')"
         >
           <span>⌕</span>
@@ -1120,6 +1123,7 @@ function renderApp() {
 
         <button
           class="nav"
+          data-target="activity"
           onclick="go('activity')"
         >
           <span>♡</span>
@@ -1128,6 +1132,7 @@ function renderApp() {
 
         <button
           class="nav"
+          data-target="profile"
           onclick="go('profile')"
         >
           <span>◯</span>
@@ -2679,55 +2684,71 @@ async function loadActivity() {
 ========================= */
 
 function go(id) {
+  // 1. Nasconde tutte le schermate
   document
     .querySelectorAll(
       ".screen"
     )
     .forEach(
-      screen =>
+      screen => {
         screen.classList.remove(
           "active"
-        )
+        );
+      }
     );
 
+  // 2. Mostra esclusivamente la schermata richiesta
+  const targetScreen =
+    document.getElementById(
+      id
+    );
+
+  if (!targetScreen) {
+    return;
+  }
+
+  targetScreen.classList.add(
+    "active"
+  );
+
+  // 3. Rimuove lo stato attivo da tutti
+  //    i pulsanti della navigazione
   document
-    .getElementById(id)
-    ?.classList.add(
+    .querySelectorAll(
+      ".bottom-nav .nav"
+    )
+    .forEach(
+      nav => {
+        nav.classList.remove(
+          "active"
+        );
+
+        nav.removeAttribute(
+          "aria-current"
+        );
+      }
+    );
+
+  // 4. Trova il pulsante in base
+  //    alla schermata, NON alla posizione
+  const targetNav =
+    document.querySelector(
+      `.bottom-nav .nav[data-target="${id}"]`
+    );
+
+  // 5. Evidenzia esclusivamente il pulsante corretto
+  if (targetNav) {
+    targetNav.classList.add(
       "active"
     );
 
-  document
-    .querySelectorAll(
-      ".nav"
-    )
-    .forEach(
-      nav =>
-        nav.classList.remove(
-          "active"
-        )
+    targetNav.setAttribute(
+      "aria-current",
+      "page"
     );
-
-  const map = {
-    home: 0,
-    discover: 1,
-    activity: 3,
-    profile: 4
-  };
-
-  if (
-    map[id] !==
-    undefined
-  ) {
-    document
-      .querySelectorAll(
-        ".nav"
-      )
-      [map[id]]
-      ?.classList.add(
-        "active"
-      );
   }
 
+  // 6. Caricamenti specifici
   if (
     id ===
     "discover"
@@ -2818,4 +2839,4 @@ document.addEventListener(
   }
 );
 
-boot(); 
+boot();
