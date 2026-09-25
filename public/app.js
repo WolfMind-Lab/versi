@@ -470,13 +470,16 @@ async function register() {
 
   const password =
     document.getElementById("rpass").value;
+    const passwordConfirm =
+  document.getElementById("rpassConfirm").value;
 
-  if (
-    !displayName ||
-    !username ||
-    !email ||
-    !password
-  ) {
+ if (
+  !displayName ||
+  !username ||
+  !email ||
+  !password ||
+  !passwordConfirm
+) {
     showAuthMessage(
       "Completa tutti i campi per creare l'account.",
       "error",
@@ -493,6 +496,16 @@ async function register() {
     );
     return;
   }
+  
+  if (password !== passwordConfirm) {
+  showAuthMessage(
+    "Le password non coincidono.",
+    "error",
+    "registerMessage"
+  );
+
+  return;
+}
 
   try {
     const data = await api(
@@ -500,12 +513,13 @@ async function register() {
       {
         method: "POST",
         body: JSON.stringify({
-          displayName,
-          username,
-          email,
-          password,
-          role: chosenRole
-        })
+  displayName,
+  username,
+  email,
+  password,
+  passwordConfirm,
+  role: chosenRole
+})
       }
     );
 
