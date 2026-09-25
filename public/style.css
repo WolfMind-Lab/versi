@@ -84,3 +84,19 @@ body{padding-bottom:92px}
 .auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:22px}.auth-card{width:min(450px,100%);background:var(--surface);border:1px solid var(--line);border-radius:30px;padding:34px 26px;box-shadow:var(--shadow)}.auth-card .logo{text-align:center;font-size:39px;letter-spacing:.2em}.auth-mark{text-align:center;color:var(--accent);font:50px Georgia;margin-top:6px}.auth-card h1{text-align:center;font-size:34px;font-weight:500;margin:0}.auth-intro{text-align:center;color:var(--muted);line-height:1.6;margin:12px 0 26px}.auth-form{display:grid;gap:11px}.auth-form label{display:grid;gap:6px;font-size:12px;font-weight:700}.auth-form input{width:100%;border:1px solid var(--line);border-radius:14px;padding:14px;outline:0;background:#fff}.auth-form input:focus,.field input:focus,.field textarea:focus,.field select:focus,.search-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.field-hint{font-size:11px;color:var(--muted)}.role-title{font-size:12px;font-weight:800;margin-top:7px}.roles{display:grid;grid-template-columns:1fr 1fr;gap:9px}.role{display:grid;gap:4px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:13px}.role strong{font-size:14px}.role small{color:var(--muted)}.role.selected{border-color:var(--accent);background:var(--accent-soft)}
 @media(min-width:850px){.bottom-nav{left:50%;right:auto;transform:translateX(-50%);width:650px;bottom:18px;border:1px solid var(--line);border-radius:25px;box-shadow:var(--shadow)}body{padding-bottom:0}.sheet{border-radius:27px}.modal{align-items:center}.app-main{padding-bottom:30px}}
 @media(max-width:420px){.screen-inner{padding-left:13px;padding-right:13px}.auth-card{padding:30px 20px}.hero h1{font-size:39px}.poem-body{font-size:16px}}
+
+
+.profile-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+@media(max-width:640px){
+  .profile-actions{
+    width:100%;
+  }
+  .profile-actions .compact{
+    flex:1;
+  }
+}
