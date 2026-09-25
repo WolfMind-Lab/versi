@@ -301,7 +301,8 @@ app.post("/api/register", (req, res, next) => {
     const username = normalizeUsername(req.body.username);
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || "");
-    const role = req.body.role;
+const passwordConfirm = String(req.body.passwordConfirm || "");
+const role = req.body.role;
 
     if (!displayName) {
       return res.status(400).json({
@@ -322,6 +323,10 @@ app.post("/api/register", (req, res, next) => {
     }
 
     if (password.length < 8) {
+      if (password !== passwordConfirm) {
+  return res.status(400).json({
+    error: "Le password non coincidono."
+  });
       return res.status(400).json({
         error: "La password deve avere almeno 8 caratteri."
       });
