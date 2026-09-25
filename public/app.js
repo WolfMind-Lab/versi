@@ -1,15 +1,13 @@
 const root = document.querySelector("#app");
 
-let token = localStorage.getItem("versi_token");
+let token =
+  localStorage.getItem("versi_token");
+
 let me = null;
 let mood = "";
 let commentPoem = null;
 let isPublishing = false;
 let discoverTimer = null;
-
-let libraryTab = "saved";
-let activeCollection = null;
-let collectionPoem = null;
 
 const moods = [
   "Tutte",
@@ -22,25 +20,35 @@ const moods = [
   "Libertà"
 ];
 
-async function api(url, options = {}) {
+async function api(
+  url,
+  options = {}
+) {
   const headers = {
     ...(options.body
-      ? {"Content-Type":"application/json"}
+      ? {
+          "Content-Type":
+            "application/json"
+        }
       : {}),
     ...(options.headers || {})
   };
 
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers.Authorization =
+      `Bearer ${token}`;
   }
 
   let response;
 
   try {
-    response = await fetch(url, {
-      ...options,
-      headers
-    });
+    response = await fetch(
+      url,
+      {
+        ...options,
+        headers
+      }
+    );
   } catch {
     throw new Error(
       "Connessione non disponibile. Controlla la rete e riprova."
@@ -48,11 +56,20 @@ async function api(url, options = {}) {
   }
 
   let data = {};
-  const type = response.headers.get("content-type") || "";
 
-  if (type.includes("application/json")) {
+  const type =
+    response.headers.get(
+      "content-type"
+    ) || "";
+
+  if (
+    type.includes(
+      "application/json"
+    )
+  ) {
     try {
-      data = await response.json();
+      data =
+        await response.json();
     } catch {}
   }
 
@@ -67,28 +84,59 @@ async function api(url, options = {}) {
 }
 
 function escapeHTML(value) {
-  return String(value ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+  return String(
+    value ?? ""
+  )
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
 }
 
-function toast(text, type="normal") {
-  document.querySelectorAll(".toast").forEach(
-    x => x.remove()
+function toast(
+  text,
+  type = "normal"
+) {
+  document
+    .querySelectorAll(".toast")
+    .forEach(
+      x => x.remove()
+    );
+
+  const element =
+    document.createElement(
+      "div"
+    );
+
+  element.className =
+    `toast ${type}`;
+
+  element.textContent =
+    text;
+
+  document.body.appendChild(
+    element
   );
 
-  const element = document.createElement("div");
-
-  element.className = `toast ${type}`;
-  element.textContent = text;
-
-  document.body.appendChild(element);
-
   setTimeout(
-    () => element.remove(),
+    () =>
+      element.remove(),
     2600
   );
 }
@@ -97,19 +145,35 @@ function emptyState(
   icon,
   title,
   text,
-  buttonText="",
-  action=""
+  buttonText = "",
+  action = ""
 ) {
   return `
     <div class="empty-state">
-      <div class="empty-icon">${icon}</div>
-      <h3>${escapeHTML(title)}</h3>
-      <p>${escapeHTML(text)}</p>
+      <div class="empty-icon">
+        ${icon}
+      </div>
+
+      <h3>
+        ${escapeHTML(title)}
+      </h3>
+
+      <p>
+        ${escapeHTML(text)}
+      </p>
+
       ${
         buttonText
-          ? `<button class="secondary" onclick="${action}">
-              ${escapeHTML(buttonText)}
-             </button>`
+          ? `
+            <button
+              class="secondary"
+              onclick="${action}"
+            >
+              ${escapeHTML(
+                buttonText
+              )}
+            </button>
+          `
           : ""
       }
     </div>
@@ -119,14 +183,16 @@ function emptyState(
 function initials(name) {
   return escapeHTML(
     (
-      String(name || "V")
-        .trim()[0] || "V"
+      String(
+        name || "V"
+      ).trim()[0] ||
+      "V"
     ).toUpperCase()
   );
 }
 
 /* =========================
-   BOOT / AUTH
+   BOOT
 ========================= */
 
 async function boot() {
@@ -136,26 +202,48 @@ async function boot() {
   }
 
   try {
-    me = await api("/api/me");
+    me =
+      await api(
+        "/api/me"
+      );
+
     renderApp();
+
     await loadFeed();
+
   } catch {
-    localStorage.removeItem("versi_token");
+    localStorage.removeItem(
+      "versi_token"
+    );
+
     token = null;
     me = null;
+
     renderAuth();
   }
 }
 
+/* =========================
+   AUTH
+========================= */
+
 function renderAuth() {
   root.innerHTML = `
     <main class="auth-page">
+
       <div class="auth-card">
 
-        <div class="logo">VERSI</div>
-        <div class="auth-mark">“</div>
+        <div class="logo">
+          VERSI
+        </div>
 
-        <h1>Le parole che restano.</h1>
+        <div class="auth-mark">
+          “
+        </div>
+
+        <h1>
+          Le parole che restano.
+        </h1>
 
         <p class="auth-intro">
           Un luogo dedicato a chi scrive,
@@ -163,10 +251,14 @@ function renderAuth() {
           le parole riescono a dire.
         </p>
 
-        <div id="loginBox" class="auth-form">
+        <div
+          id="loginBox"
+          class="auth-form"
+        >
 
           <label>
             Email o username
+
             <input
               id="identifier"
               autocomplete="username"
@@ -176,6 +268,7 @@ function renderAuth() {
 
           <label>
             Password
+
             <input
               id="password"
               type="password"
@@ -186,11 +279,17 @@ function renderAuth() {
 
           <div id="loginMessage"></div>
 
-          <button class="primary" onclick="login()">
+          <button
+            class="primary"
+            onclick="login()"
+          >
             Accedi
           </button>
 
-          <button class="secondary" onclick="showRegister()">
+          <button
+            class="secondary"
+            onclick="showRegister()"
+          >
             Crea account
           </button>
 
@@ -204,6 +303,7 @@ function renderAuth() {
 
           <label>
             Nome visualizzato
+
             <input
               id="rname"
               maxlength="60"
@@ -213,6 +313,7 @@ function renderAuth() {
 
           <label>
             Username
+
             <input
               id="ruser"
               maxlength="24"
@@ -223,6 +324,7 @@ function renderAuth() {
 
           <label>
             Email
+
             <input
               id="remail"
               type="email"
@@ -231,56 +333,38 @@ function renderAuth() {
             >
           </label>
 
-         <label>
-  Password
-  <div class="password-field">
-    <input
-      id="rpass"
-      type="password"
-      minlength="8"
-      autocomplete="new-password"
-      placeholder="Almeno 8 caratteri"
-    >
+          <label>
+            Password
 
-    <button
-      type="button"
-      class="password-toggle"
-      onclick="togglePassword('rpass', this)"
-    >
-      👁
-    </button>
-  </div>
+            <input
+              id="rpass"
+              type="password"
+              minlength="8"
+              autocomplete="new-password"
+              placeholder="Almeno 8 caratteri"
+            >
 
-  <small class="field-hint">
-    Minimo 8 caratteri.
-  </small>
-</label>
+            <small class="field-hint">
+              Minimo 8 caratteri.
+            </small>
+          </label>
 
-<label>
-  Conferma password
+          <label>
+            Conferma password
 
-  <div class="password-field">
-    <input
-      id="rpassConfirm"
-      type="password"
-      minlength="8"
-      autocomplete="new-password"
-      placeholder="Ripeti la password"
-    >
+            <input
+              id="rpassConfirm"
+              type="password"
+              minlength="8"
+              autocomplete="new-password"
+              placeholder="Ripeti la password"
+            >
+          </label>
 
-    <button
-      type="button"
-      class="password-toggle"
-      onclick="togglePassword('rpassConfirm', this)"
-    >
-      👁
-    </button>
-  </div>
-
-  <small class="field-hint">
-    Inserisci nuovamente la password.
-  </small>
-</label>
+          <div
+            id="passwordMatch"
+            class="field-hint"
+          ></div>
 
           <div class="role-title">
             Come vuoi vivere VERSI?
@@ -291,10 +375,14 @@ function renderAuth() {
             <button
               id="rw"
               class="role"
+              type="button"
               onclick="pickRole('writer')"
             >
               ✍️
-              <strong>Scrittore</strong>
+              <strong>
+                Scrittore
+              </strong>
+
               <small>
                 Pubblica e condividi poesie
               </small>
@@ -303,10 +391,14 @@ function renderAuth() {
             <button
               id="rr"
               class="role"
+              type="button"
               onclick="pickRole('reader')"
             >
               📖
-              <strong>Lettore</strong>
+              <strong>
+                Lettore
+              </strong>
+
               <small>
                 Scopri, salva e segui autori
               </small>
@@ -333,16 +425,20 @@ function renderAuth() {
         </div>
 
       </div>
+
     </main>
   `;
 
   pickRole("reader");
+
+  bindPasswordConfirmation();
 }
 
 let chosenRole = "reader";
 
 function pickRole(role) {
-  chosenRole = role;
+  chosenRole =
+    role;
 
   document
     .getElementById("rw")
@@ -361,40 +457,110 @@ function pickRole(role) {
 
 function showAuthMessage(
   message,
-  type="error",
-  target="loginMessage"
+  type = "error",
+  target = "loginMessage"
 ) {
-  const box = document.getElementById(target);
+  const box =
+    document.getElementById(
+      target
+    );
 
-  if (box) {
-    box.innerHTML = message
-      ? `<div class="inline-message ${type}">
-           ${escapeHTML(message)}
-         </div>`
+  if (!box) return;
+
+  box.innerHTML =
+    message
+      ? `
+        <div class="inline-message ${type}">
+          ${escapeHTML(message)}
+        </div>
+      `
       : "";
-  }
 }
 
-function togglePassword(id, button) {
-  const input = document.getElementById(id);
+function bindPasswordConfirmation() {
+  const password =
+    document.getElementById(
+      "rpass"
+    );
 
-  if (!input) return;
+  const confirm =
+    document.getElementById(
+      "rpassConfirm"
+    );
 
-  const visible = input.type === "text";
+  const indicator =
+    document.getElementById(
+      "passwordMatch"
+    );
 
-  input.type = visible ? "password" : "text";
-  button.textContent = visible ? "👁" : "🙈";
+  if (
+    !password ||
+    !confirm ||
+    !indicator
+  ) {
+    return;
+  }
+
+  function check() {
+    if (!confirm.value) {
+      indicator.textContent =
+        "";
+      return;
+    }
+
+    if (
+      password.value ===
+      confirm.value
+    ) {
+      indicator.textContent =
+        "✓ Le password coincidono.";
+
+      indicator.style.color =
+        "#416b4b";
+    } else {
+      indicator.textContent =
+        "Le password non coincidono.";
+
+      indicator.style.color =
+        "#8d3e50";
+    }
+  }
+
+  password.addEventListener(
+    "input",
+    check
+  );
+
+  confirm.addEventListener(
+    "input",
+    check
+  );
 }
 
 function showRegister() {
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("registerBox").style.display = "block";
+  document.getElementById(
+    "loginBox"
+  ).style.display =
+    "none";
+
+  document.getElementById(
+    "registerBox"
+  ).style.display =
+    "grid";
+
   pickRole("reader");
 }
 
 function showLogin() {
-  document.getElementById("loginBox").style.display = "block";
-  document.getElementById("registerBox").style.display = "none";
+  document.getElementById(
+    "loginBox"
+  ).style.display =
+    "grid";
+
+  document.getElementById(
+    "registerBox"
+  ).style.display =
+    "none";
 }
 
 async function login() {
@@ -405,45 +571,58 @@ async function login() {
   );
 
   const identifier =
-    document.getElementById("identifier").value.trim();
+    document.getElementById(
+      "identifier"
+    ).value.trim();
 
   const password =
-    document.getElementById("password").value;
+    document.getElementById(
+      "password"
+    ).value;
 
-  if (!identifier || !password) {
+  if (
+    !identifier ||
+    !password
+  ) {
     showAuthMessage(
       "Inserisci email/username e password.",
       "error",
       "loginMessage"
     );
+
     return;
   }
 
   try {
-    const data = await api(
-      "/api/login",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          identifier,
-          password
-        })
-      }
-    );
+    const data =
+      await api(
+        "/api/login",
+        {
+          method: "POST",
+          body:
+            JSON.stringify({
+              identifier,
+              password
+            })
+        }
+      );
 
-    token = data.token;
+    token =
+      data.token;
 
     localStorage.setItem(
       "versi_token",
       token
     );
 
-    me = data.user;
+    me =
+      data.user;
 
     renderApp();
+
     await loadFeed();
 
-  } catch(error) {
+  } catch (error) {
     showAuthMessage(
       error.message,
       "error",
@@ -460,79 +639,104 @@ async function register() {
   );
 
   const displayName =
-    document.getElementById("rname").value.trim();
+    document.getElementById(
+      "rname"
+    ).value.trim();
 
   const username =
-    document.getElementById("ruser").value.trim();
+    document.getElementById(
+      "ruser"
+    ).value.trim();
 
   const email =
-    document.getElementById("remail").value.trim();
+    document.getElementById(
+      "remail"
+    ).value.trim();
 
   const password =
-    document.getElementById("rpass").value;
-    const passwordConfirm =
-  document.getElementById("rpassConfirm").value;
+    document.getElementById(
+      "rpass"
+    ).value;
 
- if (
-  !displayName ||
-  !username ||
-  !email ||
-  !password ||
-  !passwordConfirm
-) {
+  const passwordConfirm =
+    document.getElementById(
+      "rpassConfirm"
+    ).value;
+
+  if (
+    !displayName ||
+    !username ||
+    !email ||
+    !password ||
+    !passwordConfirm
+  ) {
     showAuthMessage(
       "Completa tutti i campi per creare l'account.",
       "error",
       "registerMessage"
     );
+
     return;
   }
 
-  if (password.length < 8) {
+  if (
+    password.length < 8
+  ) {
     showAuthMessage(
       "La password deve avere almeno 8 caratteri.",
       "error",
       "registerMessage"
     );
+
     return;
   }
-  
-  if (password !== passwordConfirm) {
-  showAuthMessage(
-    "Le password non coincidono.",
-    "error",
-    "registerMessage"
-  );
 
-  return;
-}
-
-  try {
-    const data = await api(
-      "/api/register",
-      {
-        method: "POST",
-        body: JSON.stringify({
-  displayName,
-  username,
-  email,
-  password,
-  passwordConfirm,
-  role: chosenRole
-})
-      }
+  if (
+    password !==
+    passwordConfirm
+  ) {
+    showAuthMessage(
+      "Le password non coincidono.",
+      "error",
+      "registerMessage"
     );
 
-    token = data.token;
+    return;
+  }
+
+  try {
+    const data =
+      await api(
+        "/api/register",
+        {
+          method: "POST",
+
+          body:
+            JSON.stringify({
+              displayName,
+              username,
+              email,
+              password,
+              passwordConfirm,
+              role:
+                chosenRole
+            })
+        }
+      );
+
+    token =
+      data.token;
 
     localStorage.setItem(
       "versi_token",
       token
     );
 
-    me = data.user;
+    me =
+      data.user;
 
     renderApp();
+
     await loadFeed();
 
     toast(
@@ -540,7 +744,7 @@ async function register() {
       "success"
     );
 
-  } catch(error) {
+  } catch (error) {
     showAuthMessage(
       error.message,
       "error",
@@ -583,7 +787,6 @@ function renderApp() {
 
       <main class="app-main">
 
-        <!-- HOME -->
         <section
           id="home"
           class="screen active"
@@ -591,6 +794,7 @@ function renderApp() {
           <div class="screen-inner">
 
             <div class="hero">
+
               <span class="eyebrow">
                 IL TUO SPAZIO POETICO
               </span>
@@ -600,21 +804,29 @@ function renderApp() {
               </h1>
 
               <p>
-                Trova le parole che assomigliano
-                a ciò che provi.
+                Trova le parole che
+                assomigliano a ciò che provi.
               </p>
+
             </div>
 
-            <div id="chips" class="chips"></div>
+            <div
+              id="chips"
+              class="chips"
+            ></div>
 
             <div class="section-label">
+
               <span>
                 Dal mondo di VERSI
               </span>
 
-              <button onclick="loadFeed()">
+              <button
+                onclick="loadFeed()"
+              >
                 Aggiorna
               </button>
+
             </div>
 
             <div id="feed"></div>
@@ -622,7 +834,6 @@ function renderApp() {
           </div>
         </section>
 
-        <!-- DISCOVER -->
         <section
           id="discover"
           class="screen"
@@ -647,73 +858,118 @@ function renderApp() {
             </div>
 
             <div class="search-box">
-              <span>⌕</span>
+
+              <span>
+                ⌕
+              </span>
 
               <input
                 id="search"
                 oninput="scheduleDiscover()"
                 placeholder="Cerca poesie, autori, parole..."
               >
+
             </div>
 
             <div class="discover-title">
               Esplora per emozione
             </div>
 
-           <div class="mood-grid">
+            <div class="mood-grid">
 
-  <button onclick="setMood('Amore')">
-    ❤️
-    <strong>Amore</strong>
-    <small>Quello che ti fa sentire a casa</small>
-  </button>
+              <button
+                onclick="setMood('Amore')"
+              >
+                ❤️
+                <strong>
+                  Amore
+                </strong>
+                <small>
+                  Parole del cuore
+                </small>
+              </button>
 
-  <button onclick="setMood('Nostalgia')">
-    🌙
-    <strong>Nostalgia</strong>
-    <small>Quello che continua a mancare</small>
-  </button>
+              <button
+                onclick="setMood('Nostalgia')"
+              >
+                🌙
+                <strong>
+                  Nostalgia
+                </strong>
+                <small>
+                  Ricordi che ritornano
+                </small>
+              </button>
 
-  <button onclick="setMood('Solitudine')">
-    🖤
-    <strong>Solitudine</strong>
-    <small>Quando nessuno sembra capirti</small>
-  </button>
+              <button
+                onclick="setMood('Rinascita')"
+              >
+                🌱
+                <strong>
+                  Rinascita
+                </strong>
+                <small>
+                  Ricominciare da sé
+                </small>
+              </button>
 
-  <button onclick="setMood('Rinascita')">
-    🌱
-    <strong>Rinascita</strong>
-    <small>Quando scegli di ricominciare</small>
-  </button>
+              <button
+                onclick="setMood('Solitudine')"
+              >
+                🖤
+                <strong>
+                  Solitudine
+                </strong>
+                <small>
+                  Il silenzio dentro
+                </small>
+              </button>
 
-  <button onclick="setMood('Felicità')">
-    ☀️
-    <strong>Felicità</strong>
-    <small>I momenti che vorresti fermare</small>
-  </button>
+              <button
+                onclick="setMood('Felicità')"
+              >
+                ☀️
+                <strong>
+                  Felicità
+                </strong>
+                <small>
+                  Piccoli momenti di luce
+                </small>
+              </button>
 
-  <button onclick="setMood('Dolore')">
-    🩶
-    <strong>Dolore</strong>
-    <small>Le parole che fanno male</small>
-  </button>
+              <button
+                onclick="setMood('Dolore')"
+              >
+                🥀
+                <strong>
+                  Dolore
+                </strong>
+                <small>
+                  Ferite e parole non dette
+                </small>
+              </button>
 
-  <button onclick="setMood('Libertà')">
-    🕊️
-    <strong>Libertà</strong>
-    <small>Quando finalmente respiri</small>
-  </button>
-
-</div>
+              <button
+                onclick="setMood('Libertà')"
+              >
+                🕊️
+                <strong>
+                  Libertà
+                </strong>
+                <small>
+                  Liberarsi e respirare
+                </small>
+              </button>
 
             </div>
 
-            <div id="discoverResults"></div>
+            <div
+              id="discoverResults"
+            ></div>
 
           </div>
         </section>
 
-        <!-- CREATE -->
         <section
           id="create"
           class="screen"
@@ -731,8 +987,8 @@ function renderApp() {
               </h1>
 
               <p>
-                Non serve trovare la frase perfetta.
-                Serve trovare la tua.
+                Non serve trovare la frase
+                perfetta. Serve trovare la tua.
               </p>
 
             </div>
@@ -741,11 +997,13 @@ function renderApp() {
               class="create-card"
               onclick="openEditor()"
             >
+
               <span class="create-icon">
                 ＋
               </span>
 
               <span>
+
                 <strong>
                   Nuova poesia
                 </strong>
@@ -753,9 +1011,13 @@ function renderApp() {
                 <small>
                   Apri l'editor e inizia a scrivere
                 </small>
+
               </span>
 
-              <b>›</b>
+              <b>
+                ›
+              </b>
+
             </button>
 
             <div class="challenge">
@@ -785,61 +1047,6 @@ function renderApp() {
           </div>
         </section>
 
-        <!-- LIBRARY -->
-        <section
-          id="library"
-          class="screen"
-        >
-          <div class="screen-inner">
-
-            <div class="page-heading">
-
-              <span class="eyebrow">
-                IL TUO SPAZIO PERSONALE
-              </span>
-
-              <h1>
-                Biblioteca
-              </h1>
-
-              <p>
-                Conserva le parole che vuoi
-                ritrovare.
-              </p>
-
-            </div>
-
-            <div class="library-tabs">
-
-              <button
-                id="libraryTabSaved"
-                onclick="setLibraryTab('saved')"
-              >
-                🔖 Salvate
-              </button>
-
-              <button
-                id="libraryTabFavorites"
-                onclick="setLibraryTab('favorites')"
-              >
-                ⭐ Preferite
-              </button>
-
-              <button
-                id="libraryTabCollections"
-                onclick="setLibraryTab('collections')"
-              >
-                📁 Raccolte
-              </button>
-
-            </div>
-
-            <div id="libraryContent"></div>
-
-          </div>
-        </section>
-
-        <!-- ACTIVITY -->
         <section
           id="activity"
           class="screen"
@@ -863,12 +1070,13 @@ function renderApp() {
 
             </div>
 
-            <div id="activities"></div>
+            <div
+              id="activities"
+            ></div>
 
           </div>
         </section>
 
-        <!-- PROFILE -->
         <section
           id="profile"
           class="screen"
@@ -930,11 +1138,11 @@ function renderApp() {
 
     </div>
 
-    <!-- PROFILE EDITOR -->
     <div
       id="profileEditor"
       class="modal"
     >
+
       <div class="sheet">
 
         <button
@@ -962,17 +1170,24 @@ function renderApp() {
         </div>
 
         <label class="field">
-          <span>NOME VISUALIZZATO</span>
+
+          <span>
+            NOME VISUALIZZATO
+          </span>
 
           <input
             id="profileName"
             maxlength="60"
             placeholder="Il tuo nome"
           >
+
         </label>
 
         <label class="field">
-          <span>USERNAME</span>
+
+          <span>
+            USERNAME
+          </span>
 
           <input
             id="profileUsername"
@@ -981,13 +1196,17 @@ function renderApp() {
           >
 
           <small class="field-hint">
-            3-24 caratteri: lettere, numeri,
-            punto, trattino o underscore.
+            3-24 caratteri: lettere,
+            numeri, punto, trattino o underscore.
           </small>
+
         </label>
 
         <label class="field">
-          <span>BIO</span>
+
+          <span>
+            BIO
+          </span>
 
           <textarea
             id="profileBio"
@@ -1002,7 +1221,9 @@ function renderApp() {
 
         </label>
 
-        <div id="profileEditorMessage"></div>
+        <div
+          id="profileEditorMessage"
+        ></div>
 
         <button
           id="saveProfileBtn"
@@ -1013,14 +1234,17 @@ function renderApp() {
         </button>
 
       </div>
+
     </div>
 
-    <!-- POEM EDITOR -->
     <div
       id="editor"
       class="modal"
     >
-      <div class="sheet editor-sheet">
+
+      <div
+        class="sheet editor-sheet"
+      >
 
         <button
           class="close"
@@ -1048,7 +1272,9 @@ function renderApp() {
 
         <label class="field">
 
-          <span>TITOLO</span>
+          <span>
+            TITOLO
+          </span>
 
           <input
             id="pt"
@@ -1060,7 +1286,9 @@ function renderApp() {
 
         <label class="field">
 
-          <span>TESTO</span>
+          <span>
+            TESTO
+          </span>
 
           <textarea
             id="pb"
@@ -1076,18 +1304,28 @@ function renderApp() {
 
         <label class="field">
 
-          <span>COME TI SENTI?</span>
+          <span>
+            COME TI SENTI?
+          </span>
 
           <select id="pm">
             ${moods
-              .filter(x => x !== "Tutte")
-              .map(x => `<option>${x}</option>`)
+              .filter(
+                x =>
+                  x !== "Tutte"
+              )
+              .map(
+                x =>
+                  `<option>${x}</option>`
+              )
               .join("")}
           </select>
 
         </label>
 
-        <div class="visibility-options">
+        <div
+          class="visibility-options"
+        >
 
           <span class="field-label">
             CHI PUÒ LEGGERLA?
@@ -1100,7 +1338,9 @@ function renderApp() {
             onclick="pickVisibility('public')"
           >
             🌎
-            <strong>Tutti</strong>
+            <strong>
+              Tutti
+            </strong>
             <small>
               La poesia entra nel feed pubblico.
             </small>
@@ -1113,7 +1353,9 @@ function renderApp() {
             onclick="pickVisibility('followers')"
           >
             👥
-            <strong>I miei follower</strong>
+            <strong>
+              I miei follower
+            </strong>
             <small>
               Solo chi ti segue può leggerla.
             </small>
@@ -1126,7 +1368,9 @@ function renderApp() {
             onclick="pickVisibility('private')"
           >
             🔒
-            <strong>Solo io</strong>
+            <strong>
+              Solo io
+            </strong>
             <small>
               Resta nella tua area personale.
             </small>
@@ -1140,7 +1384,9 @@ function renderApp() {
           value="public"
         >
 
-        <div id="publishMessage"></div>
+        <div
+          id="publishMessage"
+        ></div>
 
         <button
           id="publishBtn"
@@ -1151,13 +1397,14 @@ function renderApp() {
         </button>
 
       </div>
+
     </div>
 
-    <!-- COMMENTS -->
     <div
       id="comments"
       class="modal"
     >
+
       <div class="sheet">
 
         <button
@@ -1179,7 +1426,9 @@ function renderApp() {
 
         </div>
 
-        <div id="commentList"></div>
+        <div
+          id="commentList"
+        ></div>
 
         <div class="comment-form">
 
@@ -1189,112 +1438,16 @@ function renderApp() {
             placeholder="Scrivi un pensiero..."
           >
 
-          <button onclick="comment()">
+          <button
+            onclick="comment()"
+          >
             Invia
           </button>
 
         </div>
 
       </div>
-    </div>
 
-    <!-- COLLECTION PICKER -->
-    <div
-      id="collectionPicker"
-      class="modal"
-    >
-      <div class="sheet">
-
-        <button
-          class="close"
-          onclick="closeM('collectionPicker')"
-        >
-          ×
-        </button>
-
-        <div class="modal-heading">
-
-          <span class="eyebrow">
-            BIBLIOTECA
-          </span>
-
-          <h2>
-            Aggiungi a una raccolta
-          </h2>
-
-          <p>
-            Scegli dove vuoi conservare
-            questa poesia.
-          </p>
-
-        </div>
-
-        <div id="collectionPickerList"></div>
-
-        <button
-          class="secondary collection-new-button"
-          onclick="createCollectionFromPicker()"
-        >
-          ＋ Nuova raccolta
-        </button>
-
-      </div>
-    </div>
-
-    <!-- CREATE COLLECTION -->
-    <div
-      id="collectionCreator"
-      class="modal"
-    >
-      <div class="sheet">
-
-        <button
-          class="close"
-          onclick="closeM('collectionCreator')"
-        >
-          ×
-        </button>
-
-        <div class="modal-heading">
-
-          <span class="eyebrow">
-            BIBLIOTECA
-          </span>
-
-          <h2>
-            Nuova raccolta
-          </h2>
-
-          <p>
-            Dai un nome alle poesie
-            che vuoi conservare insieme.
-          </p>
-
-        </div>
-
-        <label class="field">
-
-          <span>NOME DELLA RACCOLTA</span>
-
-          <input
-            id="collectionName"
-            maxlength="60"
-            placeholder="es. Poesie che amo"
-          >
-
-        </label>
-
-        <div id="collectionCreatorMessage"></div>
-
-        <button
-          id="createCollectionBtn"
-          class="primary"
-          onclick="createCollection()"
-        >
-          Crea raccolta
-        </button>
-
-      </div>
     </div>
   `;
 
@@ -1309,11 +1462,16 @@ function renderApp() {
 
 function renderProfileHeader() {
   const el =
-    document.getElementById("profileHeader");
+    document.getElementById(
+      "profileHeader"
+    );
 
-  if (!el || !me) return;
+  if (!el || !me) {
+    return;
+  }
 
-  const stats = me.stats || {};
+  const stats =
+    me.stats || {};
 
   el.innerHTML = `
     <div class="profile-header">
@@ -1321,35 +1479,36 @@ function renderProfileHeader() {
       <div class="profile-top">
 
         <div class="profile-avatar">
-          ${initials(me.display_name)}
+          ${initials(
+            me.display_name
+          )}
         </div>
 
         <div class="profile-info">
 
           <span class="eyebrow">
-            ${me.role === "writer"
-              ? "SCRITTORE"
-              : "LETTORE"}
+            ${
+              me.role === "writer"
+                ? "SCRITTORE"
+                : "LETTORE"
+            }
           </span>
 
           <h1>
-            ${escapeHTML(me.display_name)}
+            ${escapeHTML(
+              me.display_name
+            )}
           </h1>
 
           <p>
-            @${escapeHTML(me.username)}
+            @${escapeHTML(
+              me.username
+            )}
           </p>
 
         </div>
 
         <div class="profile-actions">
-
-          <button
-            class="secondary compact"
-            onclick="go('library')"
-          >
-            📚 Biblioteca
-          </button>
 
           <button
             class="secondary compact"
@@ -1379,18 +1538,30 @@ function renderProfileHeader() {
       <div class="profile-stats">
 
         <div>
-          <strong>${stats.poems || 0}</strong>
-          <span>Poesie</span>
+          <strong>
+            ${stats.poems || 0}
+          </strong>
+          <span>
+            Poesie
+          </span>
         </div>
 
         <div>
-          <strong>${stats.followers || 0}</strong>
-          <span>Follower</span>
+          <strong>
+            ${stats.followers || 0}
+          </strong>
+          <span>
+            Follower
+          </span>
         </div>
 
         <div>
-          <strong>${stats.following || 0}</strong>
-          <span>Seguiti</span>
+          <strong>
+            ${stats.following || 0}
+          </strong>
+          <span>
+            Seguiti
+          </span>
         </div>
 
       </div>
@@ -1403,29 +1574,42 @@ function openProfileEditor() {
   if (!me) return;
 
   const modal =
-    document.getElementById("profileEditor");
+    document.getElementById(
+      "profileEditor"
+    );
 
   if (!modal) return;
 
-  document.getElementById("profileName").value =
+  document.getElementById(
+    "profileName"
+  ).value =
     me.display_name || "";
 
-  document.getElementById("profileUsername").value =
+  document.getElementById(
+    "profileUsername"
+  ).value =
     me.username || "";
 
-  document.getElementById("profileBio").value =
+  document.getElementById(
+    "profileBio"
+  ).value =
     me.bio || "";
 
   document.getElementById(
     "profileEditorMessage"
-  ).innerHTML = "";
+  ).innerHTML =
+    "";
 
-  modal.classList.add("open");
+  modal.classList.add(
+    "open"
+  );
 
   setTimeout(
     () =>
       document
-        .getElementById("profileName")
+        .getElementById(
+          "profileName"
+        )
         ?.focus(),
     100
   );
@@ -1433,7 +1617,9 @@ function openProfileEditor() {
 
 async function saveProfile() {
   const button =
-    document.getElementById("saveProfileBtn");
+    document.getElementById(
+      "saveProfileBtn"
+    );
 
   const message =
     document.getElementById(
@@ -1442,68 +1628,83 @@ async function saveProfile() {
 
   const displayName =
     document
-      .getElementById("profileName")
-      ?.value.trim() || "";
+      .getElementById(
+        "profileName"
+      )
+      ?.value.trim() ||
+    "";
 
   const username =
     document
-      .getElementById("profileUsername")
-      ?.value.trim() || "";
+      .getElementById(
+        "profileUsername"
+      )
+      ?.value.trim() ||
+    "";
 
   const bio =
     document
-      .getElementById("profileBio")
-      ?.value.trim() || "";
+      .getElementById(
+        "profileBio"
+      )
+      ?.value.trim() ||
+    "";
 
-  if (!displayName || !username) {
-    if (message) {
-      message.innerHTML = `
-        <div class="inline-message error">
-          Nome e username sono obbligatori.
-        </div>
-      `;
-    }
+  if (
+    !displayName ||
+    !username
+  ) {
+    message.innerHTML = `
+      <div class="inline-message error">
+        Nome e username sono obbligatori.
+      </div>
+    `;
 
     return;
   }
 
   if (bio.length > 300) {
-    if (message) {
-      message.innerHTML = `
-        <div class="inline-message error">
-          La bio può contenere al massimo 300 caratteri.
-        </div>
-      `;
-    }
+    message.innerHTML = `
+      <div class="inline-message error">
+        La bio può contenere al massimo 300 caratteri.
+      </div>
+    `;
 
     return;
   }
 
   if (button) {
-    button.disabled = true;
-    button.textContent = "Salvataggio...";
+    button.disabled =
+      true;
+
+    button.textContent =
+      "Salvataggio...";
   }
 
-  if (message) {
-    message.innerHTML = "";
-  }
+  message.innerHTML =
+    "";
 
   try {
-    const data = await api(
-      "/api/me",
-      {
-        method: "PATCH",
-        body: JSON.stringify({
-          displayName,
-          username,
-          bio
-        })
-      }
+    const data =
+      await api(
+        "/api/me",
+        {
+          method: "PATCH",
+          body:
+            JSON.stringify({
+              displayName,
+              username,
+              bio
+            })
+        }
+      );
+
+    me =
+      data.user;
+
+    closeM(
+      "profileEditor"
     );
-
-    me = data.user;
-
-    closeM("profileEditor");
 
     renderProfileHeader();
 
@@ -1514,18 +1715,20 @@ async function saveProfile() {
       "success"
     );
 
-  } catch(error) {
-    if (message) {
-      message.innerHTML = `
-        <div class="inline-message error">
-          ${escapeHTML(error.message)}
-        </div>
-      `;
-    }
+  } catch (error) {
+    message.innerHTML = `
+      <div class="inline-message error">
+        ${escapeHTML(
+          error.message
+        )}
+      </div>
+    `;
 
   } finally {
     if (button) {
-      button.disabled = false;
+      button.disabled =
+        false;
+
       button.textContent =
         "Salva modifiche";
     }
@@ -1533,36 +1736,49 @@ async function saveProfile() {
 }
 
 /* =========================
-   HOME / FEED
+   CHIPS / FEED
 ========================= */
 
 function renderChips() {
   const el =
-    document.getElementById("chips");
+    document.getElementById(
+      "chips"
+    );
 
   if (!el) return;
 
-  el.innerHTML = moods
-    .map(x => `
-      <button
-        class="chip ${
-          x === mood ||
-          (!mood && x === "Tutte")
-            ? "on"
-            : ""
-        }"
-        onclick="setMood('${x}')"
-      >
-        ${x}
-      </button>
-    `)
-    .join("");
+  el.innerHTML =
+    moods
+      .map(
+        x => `
+          <button
+            class="chip ${
+              x === mood ||
+              (
+                !mood &&
+                x === "Tutte"
+              )
+                ? "on"
+                : ""
+            }"
+            onclick="setMood('${x}')"
+          >
+            ${x}
+          </button>
+        `
+      )
+      .join("");
+}
+
+function goDiscover() {
+  go("discover");
 }
 
 function setMood(value) {
-  mood = value === "Tutte"
-    ? ""
-    : value;
+  mood =
+    value === "Tutte"
+      ? ""
+      : value;
 
   renderChips();
 
@@ -1570,8 +1786,12 @@ function setMood(value) {
 
   if (
     document
-      .getElementById("discover")
-      ?.classList.contains("active")
+      .getElementById(
+        "discover"
+      )
+      ?.classList.contains(
+        "active"
+      )
   ) {
     loadDiscover();
   }
@@ -1579,7 +1799,9 @@ function setMood(value) {
 
 async function loadFeed() {
   const feed =
-    document.getElementById("feed");
+    document.getElementById(
+      "feed"
+    );
 
   if (!feed) return;
 
@@ -1593,38 +1815,46 @@ async function loadFeed() {
   `;
 
   try {
-    const poems = await api(
-      `/api/poems?mood=${encodeURIComponent(mood)}`
-    );
+    const poems =
+      await api(
+        `/api/poems?mood=${encodeURIComponent(
+          mood
+        )}`
+      );
 
-    feed.innerHTML = poems.length
-      ? poems.map(card).join("")
-      : emptyState(
-          "✍️",
-          "Il feed è ancora vuoto.",
-          "Potresti essere tu a lasciare il primo verso.",
-          me?.role === "writer"
-            ? "Scrivi una poesia"
-            : "Esplora le emozioni",
-          me?.role === "writer"
-            ? "openEditor()"
-            : "goDiscover()"
-        );
+    feed.innerHTML =
+      poems.length
+        ? poems
+            .map(card)
+            .join("")
+        : emptyState(
+            "✍️",
+            "Il feed è ancora vuoto.",
+            "Potresti essere tu a lasciare il primo verso.",
+            me?.role === "writer"
+              ? "Scrivi una poesia"
+              : "Esplora le emozioni",
+            me?.role === "writer"
+              ? "openEditor()"
+              : "goDiscover()"
+          );
 
-  } catch(error) {
-    feed.innerHTML = emptyState(
-      "☁️",
-      "Non riesco a caricare il feed.",
-      error.message,
-      "Riprova",
-      "loadFeed()"
-    );
+  } catch (error) {
+    feed.innerHTML =
+      emptyState(
+        "☁️",
+        "Non riesco a caricare il feed.",
+        error.message,
+        "Riprova",
+        "loadFeed()"
+      );
   }
 }
 
 function card(p) {
   const canFollow =
-    p.user_id !== me.id;
+    p.user_id !==
+    me.id;
 
   return `
     <article class="poem-card">
@@ -1632,17 +1862,23 @@ function card(p) {
       <div class="poem-author">
 
         <div class="avatar">
-          ${initials(p.display_name)}
+          ${initials(
+            p.display_name
+          )}
         </div>
 
         <div class="author-copy">
 
           <strong>
-            ${escapeHTML(p.display_name)}
+            ${escapeHTML(
+              p.display_name
+            )}
           </strong>
 
           <span>
-            @${escapeHTML(p.username)}
+            @${escapeHTML(
+              p.username
+            )}
           </span>
 
         </div>
@@ -1673,15 +1909,21 @@ function card(p) {
       <div class="poem-content">
 
         <span class="poem-mood">
-          ${escapeHTML(p.mood)}
+          ${escapeHTML(
+            p.mood
+          )}
         </span>
 
         <h2>
-          ${escapeHTML(p.title)}
+          ${escapeHTML(
+            p.title
+          )}
         </h2>
 
         <p class="poem-body">
-          ${escapeHTML(p.body)}
+          ${escapeHTML(
+            p.body
+          )}
         </p>
 
       </div>
@@ -1689,10 +1931,19 @@ function card(p) {
       <div class="poem-actions">
 
         <button
-          class="${p.liked ? "active" : ""}"
+          class="${
+            p.liked
+              ? "active"
+              : ""
+          }"
           onclick="like(${p.id})"
         >
-          ${p.liked ? "♥" : "♡"} ${p.likes}
+          ${
+            p.liked
+              ? "♥"
+              : "♡"
+          }
+          ${p.likes}
         </button>
 
         <button
@@ -1702,31 +1953,18 @@ function card(p) {
         </button>
 
         <button
-          class="${p.saved ? "active" : ""}"
+          class="${
+            p.saved
+              ? "active"
+              : ""
+          }"
           onclick="save(${p.id})"
-          title="Salva"
         >
           🔖 ${p.saves}
         </button>
 
         <button
-          class="${p.favorited ? "active" : ""}"
-          onclick="favorite(${p.id})"
-          title="Preferita"
-        >
-          ${p.favorited ? "★" : "☆"}
-        </button>
-
-        <button
-          onclick="openCollectionPicker(${p.id})"
-          title="Aggiungi a una raccolta"
-        >
-          📁
-        </button>
-
-        <button
           onclick="sharePoem(${p.id})"
-          title="Condividi"
         >
           ↗
         </button>
@@ -1741,113 +1979,66 @@ async function like(id) {
   try {
     await api(
       `/api/poems/${id}/like`,
-      { method:"POST" }
+      {
+        method: "POST"
+      }
     );
 
-    await refreshCurrentScreen();
+    await loadFeed();
 
-  } catch(e) {
-    toast(e.message);
+  } catch (error) {
+    toast(
+      error.message
+    );
   }
 }
 
 async function save(id) {
   try {
-    const result = await api(
+    await api(
       `/api/poems/${id}/save`,
-      { method:"POST" }
+      {
+        method: "POST"
+      }
     );
 
-    await refreshCurrentScreen();
+    await loadFeed();
 
     toast(
-      result.poem.saved
-        ? "Salvata nella tua biblioteca."
-        : "Rimossa dalla biblioteca.",
+      "Salvata nella tua biblioteca.",
       "success"
     );
 
-  } catch(e) {
-    toast(e.message);
-  }
-}
-
-async function favorite(id) {
-  try {
-    const result = await api(
-      `/api/poems/${id}/favorite`,
-      { method:"POST" }
-    );
-
-    await refreshCurrentScreen();
-
+  } catch (error) {
     toast(
-      result.poem.favorited
-        ? "Aggiunta alle preferite ⭐"
-        : "Rimossa dalle preferite.",
-      "success"
+      error.message
     );
-
-  } catch(e) {
-    toast(e.message);
   }
 }
 
 async function follow(id) {
   try {
-    const r = await api(
-      `/api/users/${id}/follow`,
-      { method:"POST" }
-    );
+    const result =
+      await api(
+        `/api/users/${id}/follow`,
+        {
+          method: "POST"
+        }
+      );
 
-    await refreshCurrentScreen();
+    await loadFeed();
 
     toast(
-      r.following
+      result.following
         ? "Ora segui questo autore."
         : "Hai smesso di seguirlo.",
       "success"
     );
 
-  } catch(e) {
-    toast(e.message);
-  }
-}
-
-async function refreshCurrentScreen() {
-  if (
-    document
-      .getElementById("home")
-      ?.classList.contains("active")
-  ) {
-    await loadFeed();
-    return;
-  }
-
-  if (
-    document
-      .getElementById("discover")
-      ?.classList.contains("active")
-  ) {
-    await loadDiscover();
-    return;
-  }
-
-  if (
-    document
-      .getElementById("profile")
-      ?.classList.contains("active")
-  ) {
-    await loadProfile();
-    return;
-  }
-
-  if (
-    document
-      .getElementById("library")
-      ?.classList.contains("active")
-  ) {
-    await loadLibrary();
+  } catch (error) {
+    toast(
+      error.message
+    );
   }
 }
 
@@ -1856,762 +2047,91 @@ async function refreshCurrentScreen() {
 ========================= */
 
 function scheduleDiscover() {
-  clearTimeout(discoverTimer);
-
-  discoverTimer = setTimeout(
-    loadDiscover,
-    250
+  clearTimeout(
+    discoverTimer
   );
+
+  discoverTimer =
+    setTimeout(
+      loadDiscover,
+      250
+    );
 }
 
 async function loadDiscover() {
   const input =
-    document.getElementById("search");
+    document.getElementById(
+      "search"
+    );
 
   const results =
     document.getElementById(
       "discoverResults"
     );
 
-  if (!input || !results) return;
-
-  const q = input.value.trim();
-
-  results.innerHTML = `
-    <div class="loading-state">
-      <span></span>
-      <p>Ricerca in corso...</p>
-    </div>
-  `;
-
-  try {
-    const poems = await api(
-      `/api/poems?q=${encodeURIComponent(q)}&mood=${encodeURIComponent(mood)}`
-    );
-
-    results.innerHTML = poems.length
-      ? `
-        <div class="result-heading">
-          ${
-            q
-              ? `Risultati per “${escapeHTML(q)}”`
-              : "Ultime poesie"
-          }
-        </div>
-
-        ${poems.map(card).join("")}
-      `
-      : emptyState(
-          "⌕",
-          "Nessun risultato.",
-          q
-            ? "Prova un'altra parola o un'emozione."
-            : "Qui compariranno le poesie che potrai scoprire."
-        );
-
-  } catch(e) {
-    results.innerHTML = emptyState(
-      "☁️",
-      "Ricerca non disponibile.",
-      e.message,
-      "Riprova",
-      "loadDiscover()"
-    );
-  }
-}
-
-/* =========================
-   LIBRARY
-========================= */
-
-function setLibraryTab(tab) {
-  libraryTab = tab;
-  activeCollection = null;
-  loadLibrary();
-}
-
-function renderLibraryTabs() {
-  document
-    .getElementById("libraryTabSaved")
-    ?.classList.toggle(
-      "active",
-      libraryTab === "saved"
-    );
-
-  document
-    .getElementById("libraryTabFavorites")
-    ?.classList.toggle(
-      "active",
-      libraryTab === "favorites"
-    );
-
-  document
-    .getElementById("libraryTabCollections")
-    ?.classList.toggle(
-      "active",
-      libraryTab === "collections"
-    );
-}
-
-async function loadLibrary() {
-  const content =
-    document.getElementById(
-      "libraryContent"
-    );
-
-  if (!content) return;
-
-  renderLibraryTabs();
-
-  content.innerHTML = `
-    <div class="loading-state">
-      <span></span>
-      <p>
-        Apro la tua biblioteca...
-      </p>
-    </div>
-  `;
-
-  try {
-    const data = await api(
-      "/api/library"
-    );
-
-    if (libraryTab === "saved") {
-      renderSavedLibrary(data.saved || []);
-      return;
-    }
-
-    if (libraryTab === "favorites") {
-      renderFavoriteLibrary(
-        data.favorites || []
-      );
-      return;
-    }
-
-    renderCollections(
-      data.collections || []
-    );
-
-  } catch(e) {
-    content.innerHTML = emptyState(
-      "☁️",
-      "Biblioteca non disponibile.",
-      e.message,
-      "Riprova",
-      "loadLibrary()"
-    );
-  }
-}
-
-function renderSavedLibrary(poems) {
-  const content =
-    document.getElementById(
-      "libraryContent"
-    );
-
-  content.innerHTML = `
-    <div class="library-heading">
-      <div>
-        <span class="eyebrow">
-          CONSERVATE
-        </span>
-
-        <h2>
-          Le tue poesie salvate
-        </h2>
-      </div>
-
-      <strong>
-        ${poems.length}
-      </strong>
-    </div>
-
-    ${
-      poems.length
-        ? poems.map(card).join("")
-        : emptyState(
-            "🔖",
-            "Nessuna poesia salvata.",
-            "Quando troverai una poesia da rileggere, salvala qui."
-          )
-    }
-  `;
-}
-
-function renderFavoriteLibrary(poems) {
-  const content =
-    document.getElementById(
-      "libraryContent"
-    );
-
-  content.innerHTML = `
-    <div class="library-heading">
-      <div>
-        <span class="eyebrow">
-          PREFERITE
-        </span>
-
-        <h2>
-          Le parole che ami di più
-        </h2>
-      </div>
-
-      <strong>
-        ${poems.length}
-      </strong>
-    </div>
-
-    ${
-      poems.length
-        ? poems.map(card).join("")
-        : emptyState(
-            "☆",
-            "Nessuna preferita.",
-            "Contrassegna con una stella le poesie che vuoi tenere ancora più vicine."
-          )
-    }
-  `;
-}
-
-function renderCollections(collections) {
-  const content =
-    document.getElementById(
-      "libraryContent"
-    );
-
-  content.innerHTML = `
-    <div class="library-heading">
-
-      <div>
-        <span class="eyebrow">
-          RACCOLTE PERSONALI
-        </span>
-
-        <h2>
-          Organizza le tue parole
-        </h2>
-      </div>
-
-      <strong>
-        ${collections.length}
-      </strong>
-
-    </div>
-
-    <button
-      class="collection-create-card"
-      onclick="openCollectionCreator()"
-    >
-      <span class="collection-create-icon">
-        ＋
-      </span>
-
-      <span>
-        <strong>
-          Nuova raccolta
-        </strong>
-
-        <small>
-          Crea uno spazio per poesie
-          che vuoi ritrovare insieme.
-        </small>
-      </span>
-    </button>
-
-    ${
-      collections.length
-        ? `
-          <div class="collections-grid">
-            ${collections
-              .map(collectionCard)
-              .join("")}
-          </div>
-        `
-        : emptyState(
-            "📁",
-            "Non hai ancora raccolte.",
-            "Crea la prima raccolta per organizzare le tue poesie preferite."
-          )
-    }
-  `;
-}
-
-function collectionCard(collection) {
-  return `
-    <article class="collection-card">
-
-      <button
-        class="collection-main"
-        onclick="openCollection(${collection.id})"
-      >
-
-        <span class="collection-icon">
-          📁
-        </span>
-
-        <span class="collection-copy">
-
-          <strong>
-            ${escapeHTML(collection.name)}
-          </strong>
-
-          <small>
-            ${collection.count}
-            ${
-              collection.count === 1
-                ? "poesia"
-                : "poesie"
-            }
-          </small>
-
-        </span>
-
-        <span class="collection-arrow">
-          ›
-        </span>
-
-      </button>
-
-      <button
-        class="collection-delete"
-        onclick="deleteCollection(${collection.id}, '${escapeHTML(collection.name).replaceAll("'","&#039;")}')"
-        title="Elimina raccolta"
-      >
-        ⋯
-      </button>
-
-    </article>
-  `;
-}
-
-async function openCollection(id) {
-  const content =
-    document.getElementById(
-      "libraryContent"
-    );
-
-  if (!content) return;
-
-  content.innerHTML = `
-    <div class="loading-state">
-      <span></span>
-      <p>
-        Apro la raccolta...
-      </p>
-    </div>
-  `;
-
-  try {
-    const collection = await api(
-      `/api/collections/${id}`
-    );
-
-    activeCollection = collection;
-
-    content.innerHTML = `
-      <div class="collection-detail-header">
-
-        <button
-          class="back-library"
-          onclick="setLibraryTab('collections')"
-        >
-          ← Biblioteca
-        </button>
-
-        <div class="collection-detail-title">
-
-          <span class="collection-big-icon">
-            📁
-          </span>
-
-          <div>
-
-            <span class="eyebrow">
-              RACCOLTA
-            </span>
-
-            <h2>
-              ${escapeHTML(collection.name)}
-            </h2>
-
-            <p>
-              ${collection.count}
-              ${
-                collection.count === 1
-                  ? "poesia"
-                  : "poesie"
-              }
-            </p>
-
-          </div>
-
-        </div>
-
-        <button
-          class="secondary collection-delete-full"
-          onclick="deleteCollection(${collection.id}, '${escapeHTML(collection.name).replaceAll("'","&#039;")}')"
-        >
-          Elimina raccolta
-        </button>
-
-      </div>
-
-      ${
-        collection.poems.length
-          ? collection.poems
-              .map(p => collectionCardPoem(
-                p,
-                collection.id
-              ))
-              .join("")
-          : emptyState(
-              "📖",
-              "La raccolta è vuota.",
-              "Aggiungi le poesie che vuoi conservare qui."
-            )
-      }
-    `;
-
-  } catch(e) {
-    content.innerHTML = emptyState(
-      "☁️",
-      "Raccolta non disponibile.",
-      e.message,
-      "Torna alla biblioteca",
-      "setLibraryTab('collections')"
-    );
-  }
-}
-
-function collectionCardPoem(p, collectionId) {
-  return `
-    <article class="poem-card">
-
-      <div class="poem-author">
-
-        <div class="avatar">
-          ${initials(p.display_name)}
-        </div>
-
-        <div class="author-copy">
-
-          <strong>
-            ${escapeHTML(p.display_name)}
-          </strong>
-
-          <span>
-            @${escapeHTML(p.username)}
-          </span>
-
-        </div>
-
-      </div>
-
-      <div class="poem-content">
-
-        <span class="poem-mood">
-          ${escapeHTML(p.mood)}
-        </span>
-
-        <h2>
-          ${escapeHTML(p.title)}
-        </h2>
-
-        <p class="poem-body">
-          ${escapeHTML(p.body)}
-        </p>
-
-      </div>
-
-      <div class="collection-poem-actions">
-
-        <button
-          onclick="openCollectionPicker(${p.id})"
-        >
-          📁 Altra raccolta
-        </button>
-
-        <button
-          onclick="removeFromCollection(${collectionId}, ${p.id})"
-        >
-          − Rimuovi
-        </button>
-
-      </div>
-
-    </article>
-  `;
-}
-
-async function openCollectionPicker(poemId) {
-  collectionPoem = poemId;
-
-  const list =
-    document.getElementById(
-      "collectionPickerList"
-    );
-
-  if (!list) return;
-
-  list.innerHTML = `
-    <div class="loading-state">
-      <span></span>
-      <p>
-        Caricamento raccolte...
-      </p>
-    </div>
-  `;
-
-  document
-    .getElementById("collectionPicker")
-    ?.classList.add("open");
-
-  try {
-    const data = await api(
-      "/api/library"
-    );
-
-    const collections =
-      data.collections || [];
-
-    list.innerHTML = collections.length
-      ? collections
-          .map(c => `
-            <button
-              class="picker-collection"
-              onclick="addPoemToCollection(${c.id})"
-            >
-              <span>
-                📁
-              </span>
-
-              <span>
-                <strong>
-                  ${escapeHTML(c.name)}
-                </strong>
-
-                <small>
-                  ${c.count}
-                  ${
-                    c.count === 1
-                      ? "poesia"
-                      : "poesie"
-                  }
-                </small>
-              </span>
-
-              <b>
-                ›
-              </b>
-            </button>
-          `)
-          .join("")
-      : emptyState(
-          "📁",
-          "Nessuna raccolta.",
-          "Creane una per iniziare a organizzare le tue poesie."
-        );
-
-  } catch(e) {
-    list.innerHTML = emptyState(
-      "☁️",
-      "Non riesco a caricare le raccolte.",
-      e.message
-    );
-  }
-}
-
-async function addPoemToCollection(collectionId) {
-  if (!collectionPoem) return;
-
-  try {
-    await api(
-      `/api/collections/${collectionId}/poems/${collectionPoem}`,
-      { method:"POST" }
-    );
-
-    closeM("collectionPicker");
-
-    toast(
-      "Poesia aggiunta alla raccolta. 📁",
-      "success"
-    );
-
-    if (
-      activeCollection &&
-      activeCollection.id === collectionId
-    ) {
-      await openCollection(collectionId);
-    }
-
-  } catch(e) {
-    toast(e.message);
-  }
-}
-
-function openCollectionCreator() {
-  const modal =
-    document.getElementById(
-      "collectionCreator"
-    );
-
-  if (!modal) return;
-
-  document.getElementById(
-    "collectionName"
-  ).value = "";
-
-  document.getElementById(
-    "collectionCreatorMessage"
-  ).innerHTML = "";
-
-  modal.classList.add("open");
-
-  setTimeout(
-    () =>
-      document
-        .getElementById("collectionName")
-        ?.focus(),
-    100
-  );
-}
-
-async function createCollection() {
-  const input =
-    document.getElementById(
-      "collectionName"
-    );
-
-  const button =
-    document.getElementById(
-      "createCollectionBtn"
-    );
-
-  const message =
-    document.getElementById(
-      "collectionCreatorMessage"
-    );
-
-  const name =
-    input?.value.trim() || "";
-
-  if (!name) {
-    message.innerHTML = `
-      <div class="inline-message error">
-        Inserisci un nome per la raccolta.
-      </div>
-    `;
-
-    return;
-  }
-
-  button.disabled = true;
-  button.textContent = "Creazione...";
-
-  try {
-    await api(
-      "/api/collections",
-      {
-        method:"POST",
-        body:JSON.stringify({ name })
-      }
-    );
-
-    closeM("collectionCreator");
-
-    toast(
-      "Raccolta creata 📁",
-      "success"
-    );
-
-    libraryTab = "collections";
-    activeCollection = null;
-
-    await loadLibrary();
-
-  } catch(e) {
-    message.innerHTML = `
-      <div class="inline-message error">
-        ${escapeHTML(e.message)}
-      </div>
-    `;
-
-  } finally {
-    button.disabled = false;
-    button.textContent =
-      "Crea raccolta";
-  }
-}
-
-async function createCollectionFromPicker() {
-  closeM("collectionPicker");
-
-  openCollectionCreator();
-
-  const oldCreate =
-    document.getElementById(
-      "createCollectionBtn"
-    );
-
-  if (!oldCreate) return;
-
-  oldCreate.dataset.fromPicker = "true";
-}
-
-async function deleteCollection(id, name) {
-  const cleanName =
-    String(name || "")
-      .replaceAll("&#039;", "'");
-
   if (
-    !confirm(
-      `Eliminare la raccolta "${cleanName}"?\n\nLe poesie non verranno eliminate.`
-    )
+    !input ||
+    !results
   ) {
     return;
   }
 
+  const q =
+    input.value.trim();
+
+  results.innerHTML = `
+    <div class="loading-state">
+      <span></span>
+      <p>
+        Ricerca in corso...
+      </p>
+    </div>
+  `;
+
   try {
-    await api(
-      `/api/collections/${id}`,
-      { method:"DELETE" }
-    );
+    const poems =
+      await api(
+        `/api/poems?q=${encodeURIComponent(
+          q
+        )}&mood=${encodeURIComponent(
+          mood
+        )}`
+      );
 
-    activeCollection = null;
-    libraryTab = "collections";
+    results.innerHTML =
+      poems.length
+        ? `
+          <div class="result-heading">
+            ${
+              q
+                ? `Risultati per “${escapeHTML(
+                    q
+                  )}”`
+                : "Ultime poesie"
+            }
+          </div>
 
-    toast(
-      "Raccolta eliminata.",
-      "success"
-    );
+          ${poems
+            .map(card)
+            .join("")}
+        `
+        : emptyState(
+            "⌕",
+            "Nessun risultato.",
+            q
+              ? "Prova un'altra parola o un'emozione."
+              : "Qui compariranno le poesie che potrai scoprire."
+          );
 
-    await loadLibrary();
-
-  } catch(e) {
-    toast(e.message);
-  }
-}
-
-async function removeFromCollection(
-  collectionId,
-  poemId
-) {
-  try {
-    await api(
-      `/api/collections/${collectionId}/poems/${poemId}`,
-      { method:"DELETE" }
-    );
-
-    toast(
-      "Poesia rimossa dalla raccolta.",
-      "success"
-    );
-
-    await openCollection(collectionId);
-
-  } catch(e) {
-    toast(e.message);
+  } catch (error) {
+    results.innerHTML =
+      emptyState(
+        "☁️",
+        "Ricerca non disponibile.",
+        error.message,
+        "Riprova",
+        "loadDiscover()"
+      );
   }
 }
 
@@ -2621,50 +2141,70 @@ async function removeFromCollection(
 
 function bindEditor() {
   document
-    .getElementById("pb")
+    .getElementById(
+      "pb"
+    )
     ?.addEventListener(
       "input",
-      e => {
-        const c =
+      event => {
+        const count =
           document.getElementById(
             "bodyCount"
           );
 
-        if (c) {
-          c.textContent =
-            `${e.target.value.length} / 12000`;
+        if (count) {
+          count.textContent =
+            `${event.target.value.length} / 12000`;
         }
       }
     );
 }
 
-function openEditor(prefill="") {
-  if (me?.role !== "writer") {
+function openEditor(
+  prefill = ""
+) {
+  if (
+    me?.role !== "writer"
+  ) {
     toast(
       "Per pubblicare devi avere un profilo Scrittore."
     );
+
     return;
   }
 
   const editor =
-    document.getElementById("editor");
+    document.getElementById(
+      "editor"
+    );
 
-  editor?.classList.add("open");
+  editor?.classList.add(
+    "open"
+  );
 
-  document.getElementById("pt").value =
+  document.getElementById(
+    "pt"
+  ).value =
     prefill;
 
-  document.getElementById("pb").value =
+  document.getElementById(
+    "pb"
+  ).value =
     "";
 
-  document.getElementById("pm").value =
+  document.getElementById(
+    "pm"
+  ).value =
     "Amore";
 
-  pickVisibility("public");
+  pickVisibility(
+    "public"
+  );
 
   document.getElementById(
     "publishMessage"
-  ).innerHTML = "";
+  ).innerHTML =
+    "";
 
   document.getElementById(
     "bodyCount"
@@ -2672,43 +2212,61 @@ function openEditor(prefill="") {
     "0 / 12000";
 }
 
-function pickVisibility(value) {
-  document.getElementById("pv").value =
+function pickVisibility(
+  value
+) {
+  document.getElementById(
+    "pv"
+  ).value =
     value;
 
   document
-    .querySelectorAll(".visibility-option")
+    .querySelectorAll(
+      ".visibility-option"
+    )
     .forEach(
-      b =>
-        b.classList.toggle(
+      button =>
+        button.classList.toggle(
           "selected",
-          b.dataset.visibility === value
+          button.dataset
+            .visibility ===
+            value
         )
     );
 }
 
 async function publish() {
-  if (isPublishing) return;
+  if (isPublishing) {
+    return;
+  }
 
   const title =
-    document.getElementById("pt").value.trim();
+    document.getElementById(
+      "pt"
+    ).value.trim();
 
   const body =
-    document.getElementById("pb").value.trim();
+    document.getElementById(
+      "pb"
+    ).value.trim();
 
   const poemMood =
-    document.getElementById("pm").value;
+    document.getElementById(
+      "pm"
+    ).value;
 
   const visibility =
-    document.getElementById("pv").value;
+    document.getElementById(
+      "pv"
+    ).value;
 
-  const msg =
+  const message =
     document.getElementById(
       "publishMessage"
     );
 
   if (!title) {
-    msg.innerHTML = `
+    message.innerHTML = `
       <div class="inline-message error">
         Inserisci un titolo.
       </div>
@@ -2718,7 +2276,7 @@ async function publish() {
   }
 
   if (!body) {
-    msg.innerHTML = `
+    message.innerHTML = `
       <div class="inline-message error">
         Scrivi il testo della poesia.
       </div>
@@ -2727,37 +2285,53 @@ async function publish() {
     return;
   }
 
-  isPublishing = true;
+  isPublishing =
+    true;
 
-  const btn =
+  const button =
     document.getElementById(
       "publishBtn"
     );
 
-  btn.disabled = true;
-  btn.textContent =
+  button.disabled =
+    true;
+
+  button.textContent =
     "Pubblicazione...";
 
-  msg.innerHTML = "";
+  message.innerHTML =
+    "";
 
   try {
-    const result = await api(
-      "/api/poems",
-      {
-        method:"POST",
-        body:JSON.stringify({
-          title,
-          body,
-          mood:poemMood,
-          visibility
-        })
-      }
+    const result =
+      await api(
+        "/api/poems",
+        {
+          method: "POST",
+          body:
+            JSON.stringify({
+              title,
+              body,
+              mood:
+                poemMood,
+              visibility
+            })
+        }
+      );
+
+    closeM(
+      "editor"
     );
 
-    closeM("editor");
+    document.getElementById(
+      "pt"
+    ).value =
+      "";
 
-    document.getElementById("pt").value = "";
-    document.getElementById("pb").value = "";
+    document.getElementById(
+      "pb"
+    ).value =
+      "";
 
     mood = "";
 
@@ -2767,36 +2341,36 @@ async function publish() {
 
     await loadFeed();
 
-    if (visibility === "public") {
-      toast(
-        "Poesia pubblicata nel feed ✨",
-        "success"
-      );
-    } else if (visibility === "followers") {
-      toast(
-        "Poesia pubblicata per i tuoi follower.",
-        "success"
-      );
-    } else {
-      toast(
-        "Poesia salvata nella tua area privata.",
-        "success"
-      );
-    }
+    toast(
+      visibility ===
+        "public"
+        ? "Poesia pubblicata nel feed ✨"
+        : visibility ===
+            "followers"
+          ? "Poesia pubblicata per i tuoi follower."
+          : "Poesia salvata nella tua area privata.",
+      "success"
+    );
 
     return result;
 
-  } catch(e) {
-    msg.innerHTML = `
+  } catch (error) {
+    message.innerHTML = `
       <div class="inline-message error">
-        ${escapeHTML(e.message)}
+        ${escapeHTML(
+          error.message
+        )}
       </div>
     `;
 
   } finally {
-    isPublishing = false;
-    btn.disabled = false;
-    btn.textContent =
+    isPublishing =
+      false;
+
+    button.disabled =
+      false;
+
+    button.textContent =
       "Pubblica poesia";
   }
 }
@@ -2805,8 +2379,11 @@ async function publish() {
    COMMENTS
 ========================= */
 
-async function openComments(id) {
-  commentPoem = id;
+async function openComments(
+  id
+) {
+  commentPoem =
+    id;
 
   const list =
     document.getElementById(
@@ -2825,34 +2402,47 @@ async function openComments(id) {
         `/api/poems/${id}/comments`
       );
 
-    list.innerHTML = comments.length
-      ? comments
-          .map(c => `
-            <div class="comment">
+    list.innerHTML =
+      comments.length
+        ? comments
+            .map(
+              comment => `
+                <div class="comment">
 
-              <strong>
-                ${escapeHTML(c.display_name)}
-              </strong>
+                  <strong>
+                    ${escapeHTML(
+                      comment.display_name
+                    )}
+                  </strong>
 
-              <p>
-                ${escapeHTML(c.body)}
-              </p>
+                  <p>
+                    ${escapeHTML(
+                      comment.body
+                    )}
+                  </p>
 
-            </div>
-          `)
-          .join("")
-      : emptyState(
-          "💬",
-          "Ancora nessun commento.",
-          "Puoi essere il primo a lasciare un pensiero."
-        );
+                </div>
+              `
+            )
+            .join("")
+        : emptyState(
+            "💬",
+            "Ancora nessun commento.",
+            "Puoi essere il primo a lasciare un pensiero."
+          );
 
     document
-      .getElementById("comments")
-      .classList.add("open");
+      .getElementById(
+        "comments"
+      )
+      .classList.add(
+        "open"
+      );
 
-  } catch(e) {
-    toast(e.message);
+  } catch (error) {
+    toast(
+      error.message
+    );
   }
 }
 
@@ -2865,34 +2455,43 @@ async function comment() {
   const value =
     input.value.trim();
 
-  if (!value || !commentPoem) return;
+  if (
+    !value ||
+    !commentPoem
+  ) {
+    return;
+  }
 
   try {
     await api(
       `/api/poems/${commentPoem}/comments`,
       {
-        method:"POST",
-        body:JSON.stringify({
-          body:value
-        })
+        method: "POST",
+        body:
+          JSON.stringify({
+            body: value
+          })
       }
     );
 
-    input.value = "";
+    input.value =
+      "";
 
     await openComments(
       commentPoem
     );
 
-    await refreshCurrentScreen();
+    await loadFeed();
 
-  } catch(e) {
-    toast(e.message);
+  } catch (error) {
+    toast(
+      error.message
+    );
   }
 }
 
 /* =========================
-   PROFILE CONTENT
+   PROFILE LOAD
 ========================= */
 
 async function loadProfile() {
@@ -2901,7 +2500,9 @@ async function loadProfile() {
       "myProfile"
     );
 
-  if (!container) return;
+  if (!container) {
+    return;
+  }
 
   container.innerHTML = `
     <div class="loading-state">
@@ -2914,7 +2515,9 @@ async function loadProfile() {
 
   try {
     const profile =
-      await api("/api/profile");
+      await api(
+        "/api/profile"
+      );
 
     me = {
       ...me,
@@ -2930,11 +2533,17 @@ async function loadProfile() {
           Le mie poesie
         </span>
 
-        <button
-          onclick="openEditor()"
-        >
-          ＋ Scrivi
-        </button>
+        ${
+          me.role === "writer"
+            ? `
+              <button
+                onclick="openEditor()"
+              >
+                ＋ Scrivi
+              </button>
+            `
+            : ""
+        }
 
       </div>
 
@@ -2947,20 +2556,23 @@ async function loadProfile() {
               "📝",
               "Non hai ancora pubblicato poesie.",
               "Il tuo profilo è pronto. Manca solo il primo verso.",
-              "Scrivi la prima poesia",
+              me.role === "writer"
+                ? "Scrivi la prima poesia"
+                : "",
               "openEditor()"
             )
       }
     `;
 
-  } catch(e) {
-    container.innerHTML = emptyState(
-      "☁️",
-      "Profilo non disponibile.",
-      e.message,
-      "Riprova",
-      "loadProfile()"
-    );
+  } catch (error) {
+    container.innerHTML =
+      emptyState(
+        "☁️",
+        "Profilo non disponibile.",
+        error.message,
+        "Riprova",
+        "loadProfile()"
+      );
   }
 }
 
@@ -2969,14 +2581,16 @@ async function loadProfile() {
 ========================= */
 
 async function loadActivity() {
-  const c =
+  const container =
     document.getElementById(
       "activities"
     );
 
-  if (!c) return;
+  if (!container) {
+    return;
+  }
 
-  c.innerHTML = `
+  container.innerHTML = `
     <div class="loading-state">
       <span></span>
       <p>
@@ -2986,63 +2600,77 @@ async function loadActivity() {
   `;
 
   try {
-    const n =
-      await api("/api/notifications");
+    const notifications =
+      await api(
+        "/api/notifications"
+      );
 
-    c.innerHTML = n.length
-      ? n
-          .map(x => `
-            <div class="notification">
+    container.innerHTML =
+      notifications.length
+        ? notifications
+            .map(
+              notification => `
+                <div class="notification">
 
-              <div class="notification-avatar">
-                ${initials(
-                  x.display_name || "V"
-                )}
-              </div>
+                  <div class="notification-avatar">
+                    ${initials(
+                      notification.display_name ||
+                      "V"
+                    )}
+                  </div>
 
-              <div>
+                  <div>
 
-                <strong>
-                  ${escapeHTML(
-                    x.display_name ||
-                    "Qualcuno"
-                  )}
-                </strong>
+                    <strong>
+                      ${escapeHTML(
+                        notification.display_name ||
+                        "Qualcuno"
+                      )}
+                    </strong>
 
-                <p>
-                  ${
-                    x.type === "follow"
-                      ? "ha iniziato a seguirti."
-                      : "ha interagito con una tua poesia."
-                  }
-                </p>
+                    <p>
+                      ${
+                        notification.type ===
+                        "follow"
+                          ? "ha iniziato a seguirti."
+                          : "ha interagito con una tua poesia."
+                      }
+                    </p>
 
-              </div>
+                  </div>
 
-            </div>
-          `)
-          .join("")
-      : emptyState(
-          "♡",
-          "Nessuna attività ancora.",
-          "Quando qualcuno interagirà con le tue parole, lo vedrai qui."
-        );
+                </div>
+              `
+            )
+            .join("")
+        : emptyState(
+            "♡",
+            "Nessuna attività ancora.",
+            "Quando qualcuno interagirà con le tue parole, lo vedrai qui."
+          );
 
-    if (n.length) {
+    if (
+      notifications.length
+    ) {
       api(
         "/api/notifications/read",
-        { method:"POST" }
-      ).catch(() => {});
+        {
+          method: "POST"
+        }
+      ).catch(
+        () => {}
+      );
     }
 
-  } catch(e) {
-    c.innerHTML = emptyState(
-      "☁️",
-      "Attività non disponibile.",
-      e.message,
-      "Riprova",
-      "loadActivity()"
-    );
+  } catch (error) {
+    container.innerHTML =
+      emptyState(
+        "☁️",
+        "Attività non disponibile.",
+        error.message,
+        "Riprova",
+        "loadActivity()"
+      );
   }
 }
 
@@ -3052,69 +2680,98 @@ async function loadActivity() {
 
 function go(id) {
   document
-    .querySelectorAll(".screen")
+    .querySelectorAll(
+      ".screen"
+    )
     .forEach(
-      x => x.classList.remove("active")
+      screen =>
+        screen.classList.remove(
+          "active"
+        )
     );
 
   document
     .getElementById(id)
-    ?.classList.add("active");
+    ?.classList.add(
+      "active"
+    );
 
   document
-    .querySelectorAll(".nav")
+    .querySelectorAll(
+      ".nav"
+    )
     .forEach(
-      x => x.classList.remove("active")
+      nav =>
+        nav.classList.remove(
+          "active"
+        )
     );
 
   const map = {
-    home:0,
-    discover:1,
-    activity:3,
-    profile:4
+    home: 0,
+    discover: 1,
+    activity: 3,
+    profile: 4
   };
 
-  if (map[id] !== undefined) {
+  if (
+    map[id] !==
+    undefined
+  ) {
     document
-      .querySelectorAll(".nav")[map[id]]
-      ?.classList.add("active");
+      .querySelectorAll(
+        ".nav"
+      )
+      [map[id]]
+      ?.classList.add(
+        "active"
+      );
   }
 
-  if (id === "discover") {
+  if (
+    id ===
+    "discover"
+  ) {
     loadDiscover();
   }
 
-  if (id === "activity") {
+  if (
+    id ===
+    "activity"
+  ) {
     loadActivity();
   }
 
-  if (id === "profile") {
+  if (
+    id ===
+    "profile"
+  ) {
     loadProfile();
-  }
-
-  if (id === "library") {
-    libraryTab = "saved";
-    activeCollection = null;
-    loadLibrary();
   }
 }
 
 function closeM(id) {
   document
     .getElementById(id)
-    ?.classList.remove("open");
-
-  if (id === "collectionPicker") {
-    collectionPoem = null;
-  }
+    ?.classList.remove(
+      "open"
+    );
 }
 
-async function sharePoem(id) {
+/* =========================
+   SHARE / LOGOUT
+========================= */
+
+async function sharePoem(
+  id
+) {
   const url =
     `${window.location.origin}/?poem=${id}`;
 
   try {
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(
+      url
+    );
 
     toast(
       "Link copiato.",
@@ -3142,12 +2799,20 @@ function logout() {
 
 document.addEventListener(
   "keydown",
-  e => {
-    if (e.key === "Escape") {
+  event => {
+    if (
+      event.key ===
+      "Escape"
+    ) {
       document
-        .querySelectorAll(".modal.open")
+        .querySelectorAll(
+          ".modal.open"
+        )
         .forEach(
-          m => m.classList.remove("open")
+          modal =>
+            modal.classList.remove(
+              "open"
+            )
         );
     }
   }
