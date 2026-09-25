@@ -231,19 +231,56 @@ function renderAuth() {
             >
           </label>
 
-          <label>
-            Password
-            <input
-              id="rpass"
-              type="password"
-              minlength="8"
-              autocomplete="new-password"
-              placeholder="Almeno 8 caratteri"
-            >
-            <small class="field-hint">
-              Minimo 8 caratteri.
-            </small>
-          </label>
+         <label>
+  Password
+  <div class="password-field">
+    <input
+      id="rpass"
+      type="password"
+      minlength="8"
+      autocomplete="new-password"
+      placeholder="Almeno 8 caratteri"
+    >
+
+    <button
+      type="button"
+      class="password-toggle"
+      onclick="togglePassword('rpass', this)"
+    >
+      👁
+    </button>
+  </div>
+
+  <small class="field-hint">
+    Minimo 8 caratteri.
+  </small>
+</label>
+
+<label>
+  Conferma password
+
+  <div class="password-field">
+    <input
+      id="rpassConfirm"
+      type="password"
+      minlength="8"
+      autocomplete="new-password"
+      placeholder="Ripeti la password"
+    >
+
+    <button
+      type="button"
+      class="password-toggle"
+      onclick="togglePassword('rpassConfirm', this)"
+    >
+      👁
+    </button>
+  </div>
+
+  <small class="field-hint">
+    Inserisci nuovamente la password.
+  </small>
+</label>
 
           <div class="role-title">
             Come vuoi vivere VERSI?
@@ -336,6 +373,17 @@ function showAuthMessage(
          </div>`
       : "";
   }
+}
+
+function togglePassword(id, button) {
+  const input = document.getElementById(id);
+
+  if (!input) return;
+
+  const visible = input.type === "text";
+
+  input.type = visible ? "password" : "text";
+  button.textContent = visible ? "👁" : "🙈";
 }
 
 function showRegister() {
