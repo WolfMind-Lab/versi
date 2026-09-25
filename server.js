@@ -183,6 +183,61 @@ app.get("/api/me", auth, (req, res) => {
   res.json({ ...user, stats: userStats(user.id) });
 });
 
+app.patch("/api/me", auth, (req, res, next) => {
+  try {
+    const current = publicUser(req.user.id);
+    if (!current) return res.status(404).json({ error: "Account non trovato." });
+
+    const displayName = String(req.body.displayName ?? current.display_name).trim();
+    const bio = String(req.body.bio ?? current.bio ?? "").trim();
+    const username = normalizeUsername(req.body.username ?? current.username);
+
+    if (!displayName) {
+      return res.status(400).json({
+        error: "Il nome visualizzato non può essere vuoto."
+      });
+    }
+
+    if (!/^[a-z0-9._-]{3,24}$/.test(username)) {
+      return res.status(400).json({
+        error: "Username non valido. Usa 3-24 caratteri: lettere, numeri, punto, trattino o underscore."
+      });
+    }
+
+    if (bio.length > 300) {
+      return res.status(400).json({
+        error: "La bio può contenere al massimo 300 caratteri."
+      });
+    }
+
+    const duplicate = db
+      .prepare("SELECT id FROM users WHERE username=? AND id<>?")
+      .get(username, req.user.id);
+
+    if (duplicate) {
+      return res.status(409).json({
+        error: "Questo username è già utilizzato."
+      });
+    }
+
+    db.prepare(
+      "UPDATE users SET display_name=?, username=?, bio=? WHERE id=?"
+    ).run(displayName, username, bio, req.user.id);
+
+    const user = publicUser(req.user.id);
+
+    res.json({
+      ok: true,
+      user: {
+        ...user,
+        stats: userStats(user.id)
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 app.get("/api/poems", auth, (req, res) => {
   const mood = String(req.query.mood || "");
   const q = String(req.query.q || "").trim();
