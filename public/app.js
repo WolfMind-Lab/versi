@@ -660,31 +660,51 @@ function renderApp() {
               Esplora per emozione
             </div>
 
-            <div class="mood-grid">
+           <div class="mood-grid">
 
-              <button onclick="setMood('Amore')">
-                ❤️
-                <strong>Amore</strong>
-                <small>Parole del cuore</small>
-              </button>
+  <button onclick="setMood('Amore')">
+    ❤️
+    <strong>Amore</strong>
+    <small>Quello che ti fa sentire a casa</small>
+  </button>
 
-              <button onclick="setMood('Nostalgia')">
-                🌙
-                <strong>Nostalgia</strong>
-                <small>Ciò che manca</small>
-              </button>
+  <button onclick="setMood('Nostalgia')">
+    🌙
+    <strong>Nostalgia</strong>
+    <small>Quello che continua a mancare</small>
+  </button>
 
-              <button onclick="setMood('Rinascita')">
-                🌱
-                <strong>Rinascita</strong>
-                <small>Ricominciarsi</small>
-              </button>
+  <button onclick="setMood('Solitudine')">
+    🖤
+    <strong>Solitudine</strong>
+    <small>Quando nessuno sembra capirti</small>
+  </button>
 
-              <button onclick="setMood('Solitudine')">
-                🖤
-                <strong>Solitudine</strong>
-                <small>Quando pesa</small>
-              </button>
+  <button onclick="setMood('Rinascita')">
+    🌱
+    <strong>Rinascita</strong>
+    <small>Quando scegli di ricominciare</small>
+  </button>
+
+  <button onclick="setMood('Felicità')">
+    ☀️
+    <strong>Felicità</strong>
+    <small>I momenti che vorresti fermare</small>
+  </button>
+
+  <button onclick="setMood('Dolore')">
+    🩶
+    <strong>Dolore</strong>
+    <small>Le parole che fanno male</small>
+  </button>
+
+  <button onclick="setMood('Libertà')">
+    🕊️
+    <strong>Libertà</strong>
+    <small>Quando finalmente respiri</small>
+  </button>
+
+</div>
 
             </div>
 
