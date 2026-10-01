@@ -1,51 +1,15 @@
-# VERSI — Social poetico
+# VERSI — versione ufficiale
 
-MVP full-stack del social dedicato alla poesia.
+Social network poetico con autenticazione, PostgreSQL/Neon, poesie, categorie, ricerca, Mi piace, salvataggi, preferiti, raccolte, follower, commenti, notifiche, profili e visibilità pubblica/follower/privata.
 
-## Funzioni incluse
+## Deploy Render + Neon
+1. Crea un database PostgreSQL su Neon.
+2. In Render imposta `DATABASE_URL` con la connection string Neon e `JWT_SECRET` con un segreto lungo e casuale.
+3. Build command: `npm install`.
+4. Start command: `npm start`.
+5. Il database viene inizializzato automaticamente al primo avvio.
 
-- Registrazione e login
-- Ruolo `writer` / `reader`
-- JWT authentication
-- Database SQLite
-- Feed pubblico
-- Filtri per emozione
-- Ricerca
-- Pubblicazione poesie
-- Visibilità pubblica / follower / privata (base dati pronta)
-- Like
-- Salvataggi
-- Follow
-- Commenti
-- Notifiche
-- Profilo autore
-- API REST
+## Locale
+Copia `.env.example` in `.env`, imposta le variabili e avvia `npm install && npm start`.
 
-## Avvio locale
-
-Richiede Node.js 20+.
-
-```bash
-npm install
-npm start
-```
-
-Apri `http://localhost:3000`.
-
-Per produzione imposta una variabile:
-
-```bash
-JWT_SECRET=una-chiave-lunga-e-casuale
-```
-
-## Struttura
-
-- `server.js` backend Express + SQLite
-- `public/index.html` shell
-- `public/app.js` interfaccia e chiamate API
-- `public/style.css` stile
-- `versi.db` viene creato automaticamente al primo avvio
-
-## Prossimi moduli
-
-Storage immagini, email verification, password reset, moderazione, messaggistica, ricerca avanzata, paginazione, rate limiting, backup DB, HTTPS, analytics, PWA/app mobile e monetizzazione.
+Nota: questa versione usa PostgreSQL persistente. Un eventuale vecchio file SQLite `versi.db` non viene importato automaticamente.
