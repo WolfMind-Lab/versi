@@ -708,18 +708,23 @@ function showForgotPassword() {
   const loginBox = document.getElementById("loginBox");
   const forgotBox = document.getElementById("forgotPasswordBox");
   if (!loginBox || !forgotBox) return;
+
+  // Tutti i pannelli auth usano lo stesso layout CSS a griglia.
+  // Non usare "block": farebbe saltare il gap verticale tra i campi.
   loginBox.style.display = "none";
-  forgotBox.style.display = "block";
-  const input = document.getElementById("forgotEmail");
-  input?.focus();
+  forgotBox.style.display = "grid";
+
+  // Non forzare il focus su iOS/Safari: evitamo apertura automatica della
+  // tastiera e il conseguente ridimensionamento/scroll della schermata.
 }
 
 function backToLogin() {
   const loginBox = document.getElementById("loginBox");
   const forgotBox = document.getElementById("forgotPasswordBox");
   if (!loginBox || !forgotBox) return;
+
   forgotBox.style.display = "none";
-  loginBox.style.display = "block";
+  loginBox.style.display = "grid";
   showAuthMessage("", "error", "forgotMessage");
 }
 
