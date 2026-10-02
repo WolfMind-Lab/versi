@@ -262,7 +262,7 @@ function renderAuth() {
             <input
               id="identifier"
               autocomplete="username"
-              placeholder="es. luna_test_2026"
+              placeholder="es. mariorossi
             >
           </label>
 
@@ -318,7 +318,7 @@ function renderAuth() {
               id="ruser"
               maxlength="24"
               autocomplete="username"
-              placeholder="es. luna_test_2026"
+              placeholder="es. mariorossi"
             >
           </label>
 
