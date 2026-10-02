@@ -345,7 +345,7 @@ function renderAuth() {
               id="forgotEmail"
               type="email"
               autocomplete="email"
-              placeholder="es. nome@email.com"
+              placeholder="es. mariorossi@gmail.com"
             >
           </label>
 
