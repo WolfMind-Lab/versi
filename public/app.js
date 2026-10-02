@@ -8,6 +8,8 @@ let mood = "";
 let commentPoem = null;
 let isPublishing = false;
 let discoverTimer = null;
+let discoverRequestId = 0;
+let discoverAbortController = null;
 
 const moods = [
   "Tutte",
@@ -199,6 +201,7 @@ async function boot() {
   const params = new URLSearchParams(window.location.search);
   const resetToken = params.get("reset");
   const verifyToken = params.get("verify");
+  const poemId = params.get("poem");
 
   if (resetToken) {
     renderResetPassword(resetToken);
@@ -232,7 +235,23 @@ async function boot() {
 
     renderApp();
 
-    await loadFeed();
+    if (poemId) {
+      window.history.replaceState({}, "", window.location.pathname);
+      try {
+        await api(`/api/poems/${encodeURIComponent(poemId)}`);
+        await loadFeed();
+        requestAnimationFrame(() => {
+          document.getElementById(`poem-${poemId}`)?.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+        });
+      } catch {
+        await loadFeed();
+      }
+    } else {
+      await loadFeed();
+    }
 
   } catch {
     localStorage.removeItem(
@@ -276,7 +295,7 @@ function renderAuth() {
 
         <div
           id="loginBox"
-          class="auth-form"
+          class="auth-form auth-panel"
         >
 
           <label>
@@ -327,8 +346,8 @@ function renderAuth() {
 
         <div
           id="forgotPasswordBox"
-          class="auth-form"
-          style="display:none"
+          class="auth-form auth-panel"
+          hidden
         >
 
           <h2>Password dimenticata?</h2>
@@ -370,8 +389,8 @@ function renderAuth() {
 
         <div
           id="registerBox"
-          class="auth-form"
-          style="display:none"
+          class="auth-form auth-panel"
+          hidden
         >
 
           <label>
@@ -610,30 +629,49 @@ function bindPasswordConfirmation() {
   );
 }
 
+function setAuthPanel(active) {
+  const panels = {
+    login: document.getElementById("loginBox"),
+    forgot: document.getElementById("forgotPasswordBox"),
+    register: document.getElementById("registerBox")
+  };
+
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+
+  Object.entries(panels).forEach(([name, panel]) => {
+    if (!panel) return;
+    panel.hidden = name !== active;
+  });
+
+  document.querySelector(".auth-page")?.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: "auto"
+  });
+
+  return panels[active] || null;
+}
+
 function showRegister() {
-  document.getElementById(
-    "loginBox"
-  ).style.display =
-    "none";
-
-  document.getElementById(
-    "registerBox"
-  ).style.display =
-    "grid";
-
+  setAuthPanel("register");
   pickRole("reader");
 }
 
 function showLogin() {
-  document.getElementById(
-    "loginBox"
-  ).style.display =
-    "grid";
+  setAuthPanel("login");
+}
 
-  document.getElementById(
-    "registerBox"
-  ).style.display =
-    "none";
+function showForgotPassword() {
+  setAuthPanel("forgot");
+  showAuthMessage("", "error", "forgotMessage");
+}
+
+function backToLogin() {
+  setAuthPanel("login");
+  showAuthMessage("", "error", "loginMessage");
+  showAuthMessage("", "error", "forgotMessage");
 }
 
 async function login() {
@@ -702,30 +740,6 @@ async function login() {
       "loginMessage"
     );
   }
-}
-
-function showForgotPassword() {
-  const loginBox = document.getElementById("loginBox");
-  const forgotBox = document.getElementById("forgotPasswordBox");
-  if (!loginBox || !forgotBox) return;
-
-  // Tutti i pannelli auth usano lo stesso layout CSS a griglia.
-  // Non usare "block": farebbe saltare il gap verticale tra i campi.
-  loginBox.style.display = "none";
-  forgotBox.style.display = "grid";
-
-  // Non forzare il focus su iOS/Safari: evitamo apertura automatica della
-  // tastiera e il conseguente ridimensionamento/scroll della schermata.
-}
-
-function backToLogin() {
-  const loginBox = document.getElementById("loginBox");
-  const forgotBox = document.getElementById("forgotPasswordBox");
-  if (!loginBox || !forgotBox) return;
-
-  forgotBox.style.display = "none";
-  loginBox.style.display = "grid";
-  showAuthMessage("", "error", "forgotMessage");
 }
 
 async function forgotPassword() {
@@ -2052,7 +2066,7 @@ function card(p) {
     me.id;
 
   return `
-    <article class="poem-card">
+    <article class="poem-card" id="poem-${p.id}">
 
       <div class="poem-author">
 
@@ -2242,9 +2256,7 @@ async function follow(id) {
 ========================= */
 
 function scheduleDiscover() {
-  clearTimeout(
-    discoverTimer
-  );
+  clearTimeout(discoverTimer);
 
   discoverTimer =
     setTimeout(
@@ -2271,6 +2283,10 @@ async function loadDiscover() {
     return;
   }
 
+  const requestId = ++discoverRequestId;
+  discoverAbortController?.abort();
+  discoverAbortController = new AbortController();
+
   const q =
     input.value.trim();
 
@@ -2290,8 +2306,13 @@ async function loadDiscover() {
           q
         )}&mood=${encodeURIComponent(
           mood
-        )}`
+        )}`,
+        {
+          signal: discoverAbortController.signal
+        }
       );
+
+    if (requestId !== discoverRequestId) return;
 
     results.innerHTML =
       poems.length
@@ -2319,6 +2340,9 @@ async function loadDiscover() {
           );
 
   } catch (error) {
+    if (error?.name === "AbortError") return;
+    if (requestId !== discoverRequestId) return;
+
     results.innerHTML =
       emptyState(
         "☁️",
@@ -2977,22 +3001,37 @@ async function sharePoem(
   id
 ) {
   const url =
-    `${window.location.origin}/?poem=${id}`;
+    `${window.location.origin}/?poem=${encodeURIComponent(id)}`;
 
   try {
-    await navigator.clipboard.writeText(
-      url
-    );
+    if (navigator.share) {
+      await navigator.share({
+        title: "VERSI",
+        text: "Guarda questa poesia su VERSI.",
+        url
+      });
+      return;
+    }
 
-    toast(
-      "Link copiato.",
-      "success"
-    );
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+      toast("Link copiato.", "success");
+      return;
+    }
 
-  } catch {
-    toast(
-      "Non riesco a copiare il link."
-    );
+    const helper = document.createElement("textarea");
+    helper.value = url;
+    helper.setAttribute("readonly", "");
+    helper.style.position = "fixed";
+    helper.style.opacity = "0";
+    document.body.appendChild(helper);
+    helper.select();
+    document.execCommand("copy");
+    helper.remove();
+    toast("Link copiato.", "success");
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    toast("Non riesco a condividere questo link.");
   }
 }
 
