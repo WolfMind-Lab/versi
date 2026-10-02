@@ -270,6 +270,7 @@ async function boot() {
 ========================= */
 
 function renderAuth() {
+  document.body.classList.add("auth-mode");
   root.innerHTML = `
     <main class="auth-page">
 
@@ -645,13 +646,62 @@ function setAuthPanel(active) {
     panel.hidden = name !== active;
   });
 
-  document.querySelector(".auth-page")?.scrollTo({
+  const page = document.querySelector(".auth-page");
+  page?.scrollTo({
     top: 0,
     left: 0,
     behavior: "auto"
   });
 
   return panels[active] || null;
+}
+
+function keepAuthInputVisible(input) {
+  if (!input || !input.matches("input, textarea, select")) return;
+  const page = document.querySelector(".auth-page");
+  if (!page) return;
+
+  const run = () => {
+    const vv = window.visualViewport;
+    const keyboardBottom = vv ? vv.height : window.innerHeight;
+    const rect = input.getBoundingClientRect();
+    const margin = 28;
+
+    if (rect.bottom > keyboardBottom - margin) {
+      const delta = rect.bottom - (keyboardBottom - margin);
+      page.scrollTop += delta;
+    } else if (rect.top < margin) {
+      page.scrollTop -= (margin - rect.top);
+    }
+  };
+
+  requestAnimationFrame(() => {
+    run();
+    setTimeout(run, 80);
+    setTimeout(run, 250);
+  });
+}
+
+if (!window.__versiAuthViewportBound) {
+  window.__versiAuthViewportBound = true;
+
+  document.addEventListener("focusin", event => {
+    keepAuthInputVisible(event.target);
+  });
+
+  window.visualViewport?.addEventListener("resize", () => {
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement) {
+      keepAuthInputVisible(active);
+    }
+  });
+
+  window.visualViewport?.addEventListener("scroll", () => {
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement) {
+      keepAuthInputVisible(active);
+    }
+  });
 }
 
 function showRegister() {
@@ -793,6 +843,7 @@ async function forgotPassword() {
 }
 
 function renderResetPassword(resetToken) {
+  document.body.classList.add("auth-mode");
   root.innerHTML = `
     <main class="auth-page">
       <div class="auth-card">
@@ -962,6 +1013,7 @@ async function register() {
 ========================= */
 
 function renderApp() {
+  document.body.classList.remove("auth-mode");
   root.innerHTML = `
     <div class="app-shell">
 

@@ -44,6 +44,11 @@ body{
   overscroll-behavior-y:auto
 }
 
+body.auth-mode{
+  padding-bottom:0;
+  overflow-x:hidden;
+}
+
 #app{
   min-height:100vh;
   min-height:100svh;
@@ -1179,13 +1184,14 @@ body{
   display:flex;
   align-items:flex-start;
   justify-content:center;
-  padding:24px 16px calc(48px + env(safe-area-inset-bottom));
+  padding:24px 16px calc(28px + env(safe-area-inset-bottom));
   overflow-x:hidden;
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
   overscroll-behavior-y:contain;
-  scroll-padding-top:24px;
-  scroll-padding-bottom:180px
+  scroll-padding-top:20px;
+  scroll-padding-bottom:220px;
+  flex:1 1 auto
 }
 
 .auth-card{
@@ -1198,7 +1204,8 @@ body{
   border:1px solid var(--line);
   border-radius:30px;
   padding:34px 26px;
-  box-shadow:var(--shadow)
+  box-shadow:var(--shadow);
+  flex:0 0 auto
 }
 
 .auth-card .logo{
@@ -1260,13 +1267,6 @@ body{
 
 .auth-form > button{
   width:100%;
-  min-width:0;
-  box-sizing:border-box;
-}
-
-.auth-form input{
-  scroll-margin-top:24px;
-  scroll-margin-bottom:180px;
 }
 
 .auth-form input:focus,
@@ -1297,9 +1297,6 @@ body{
 
 .role{
   display:grid;
-  width:100%;
-  min-width:0;
-  box-sizing:border-box;
   gap:4px;
   text-align:left;
   border:1px solid var(--line);
@@ -1415,37 +1412,56 @@ input,textarea,select,button{max-width:100%}
   }
 }
 
-@media(max-width:420px){
+@media(max-width:640px){
+  .auth-page{
+    padding-left:max(12px, env(safe-area-inset-left));
+    padding-right:max(12px, env(safe-area-inset-right));
+    padding-top:18px;
+    padding-bottom:calc(28px + env(safe-area-inset-bottom));
+  }
+
   .auth-card{
     width:100%;
-    max-width:450px;
+    padding:28px 18px;
+    border-radius:28px;
   }
 
   .auth-form{
+    width:100%;
     gap:10px;
   }
 
+  .auth-form label{
+    width:100%;
+    min-width:0;
+    font-size:13px;
+  }
+
+  .auth-form input{
+    width:100%;
+    min-width:0;
+    height:54px;
+    padding:14px;
+  }
+
   .roles{
-    gap:8px;
+    width:100%;
+    min-width:0;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   }
 
   .role{
-    padding:12px;
+    width:100%;
+    min-width:0;
+    overflow:hidden;
   }
 
-  .role strong{
-    font-size:14px;
+  .role strong,.role small{
+    overflow-wrap:anywhere;
   }
+}
 
-  .role small{
-    font-size:13px;
-    line-height:1.35;
-  }
-
-  .auth-form > button{
-    min-height:50px;
-  }
-
+@media(max-width:420px){
   .bottom-nav{
     left:7px;
     right:7px;
