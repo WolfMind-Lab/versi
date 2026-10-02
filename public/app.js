@@ -196,6 +196,29 @@ function initials(name) {
 ========================= */
 
 async function boot() {
+  const params = new URLSearchParams(window.location.search);
+  const resetToken = params.get("reset");
+  const verifyToken = params.get("verify");
+
+  if (resetToken) {
+    renderResetPassword(resetToken);
+    return;
+  }
+
+  if (verifyToken) {
+    try {
+      const data = await api(`/api/auth/verify-email?token=${encodeURIComponent(verifyToken)}`);
+      window.history.replaceState({}, "", window.location.pathname);
+      renderAuth();
+      showAuthMessage(data.message || "Email verificata.", "success", "loginMessage");
+    } catch (error) {
+      window.history.replaceState({}, "", window.location.pathname);
+      renderAuth();
+      showAuthMessage(error.message, "error", "loginMessage");
+    }
+    return;
+  }
+
   if (!token) {
     renderAuth();
     return;
@@ -284,6 +307,13 @@ function renderAuth() {
             onclick="login()"
           >
             Accedi
+          </button>
+
+          <button
+            class="secondary"
+            onclick="forgotPassword()"
+          >
+            Password dimenticata?
           </button>
 
           <button
@@ -631,6 +661,66 @@ async function login() {
   }
 }
 
+async function forgotPassword() {
+  const email = window.prompt("Inserisci l'email del tuo account VERSI:");
+  if (email === null) return;
+  const value = email.trim();
+  if (!value) {
+    showAuthMessage("Inserisci un indirizzo email.", "error", "loginMessage");
+    return;
+  }
+  try {
+    const data = await api("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email: value })
+    });
+    showAuthMessage(data.message, "success", "loginMessage");
+  } catch (error) {
+    showAuthMessage(error.message, "error", "loginMessage");
+  }
+}
+
+function renderResetPassword(resetToken) {
+  root.innerHTML = `
+    <main class="auth-page">
+      <div class="auth-card">
+        <div class="logo">VERSI</div>
+        <div class="auth-mark">“</div>
+        <h1>Reimposta la password.</h1>
+        <p class="auth-intro">Scegli una nuova password per il tuo account.</p>
+        <div class="auth-form">
+          <label>Nuova password
+            <input id="resetPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Almeno 8 caratteri">
+          </label>
+          <label>Conferma password
+            <input id="resetPasswordConfirm" type="password" minlength="8" autocomplete="new-password" placeholder="Ripeti la password">
+          </label>
+          <div id="resetMessage"></div>
+          <button class="primary" onclick="resetPassword('${String(resetToken).replace(/'/g, "\\'")}')">Aggiorna password</button>
+          <button class="secondary" onclick="window.history.replaceState({}, '', window.location.pathname); renderAuth()">Torna al login</button>
+        </div>
+      </div>
+    </main>
+  `;
+}
+
+async function resetPassword(resetToken) {
+  const password = document.getElementById("resetPassword").value;
+  const passwordConfirm = document.getElementById("resetPasswordConfirm").value;
+  showAuthMessage("", "error", "resetMessage");
+  try {
+    const data = await api("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token: resetToken, password, passwordConfirm })
+    });
+    window.history.replaceState({}, "", window.location.pathname);
+    renderAuth();
+    showAuthMessage(data.message, "success", "loginMessage");
+  } catch (error) {
+    showAuthMessage(error.message, "error", "resetMessage");
+  }
+}
+
 async function register() {
   showAuthMessage(
     "",
@@ -740,7 +830,9 @@ async function register() {
     await loadFeed();
 
     toast(
-      "Benvenuta in VERSI ✨",
+      data.emailVerificationSent
+        ? "Account creato. Controlla la tua email per confermare l'indirizzo. ✨"
+        : "Benvenuta in VERSI ✨",
       "success"
     );
 
