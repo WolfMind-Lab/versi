@@ -52,7 +52,7 @@ async function initDb() {
       id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
       email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
       display_name TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('writer','reader')),
       bio TEXT DEFAULT '',
@@ -218,7 +218,7 @@ app.post("/api/register",async(req,res,next)=>{
     if(await one(`SELECT 1 FROM users WHERE username=$1`,[username])) return res.status(409).json({error:"Questo username è già utilizzato."});
     if(await one(`SELECT 1 FROM users WHERE email=$1`,[email])) return res.status(409).json({error:"Questa email è già associata a un account."});
     const hash=await bcrypt.hash(password,12);
-    const created=await one(`INSERT INTO users(username,email,password,display_name,role) VALUES($1,$2,$3,$4,$5) RETURNING id`,[username,email,hash,displayName,role]);
+    const created=await one(`INSERT INTO users(username,email,password_hash,display_name,role) VALUES($1,$2,$3,$4,$5) RETURNING id`,[username,email,hash,displayName,role]);
     const user=await publicUser(created.id);
     const token=jwt.sign({id:user.id,username:user.username},SECRET,{expiresIn:"30d"});
     res.status(201).json({ok:true,token,user});
@@ -230,7 +230,7 @@ app.post("/api/login",async(req,res)=>{
   const password=String(req.body.password||"");
   if(!identifier||!password) return res.status(400).json({error:"Inserisci email/username e password."});
   const user=await one(`SELECT * FROM users WHERE email=$1 OR username=$2`,[identifier,identifier]);
-  if(!user || !(await bcrypt.compare(password,user.password))) return res.status(401).json({error:"Email/username o password non corretti."});
+  if(!user || !(await bcrypt.compare(password,user.password_hash))) return res.status(401).json({error:"Email/username o password non corretti."});
   const token=jwt.sign({id:user.id,username:user.username},SECRET,{expiresIn:"30d"});
   res.json({ok:true,token,user:await publicUser(user.id)});
 });
