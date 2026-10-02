@@ -262,7 +262,7 @@ function renderAuth() {
             <input
               id="identifier"
               autocomplete="username"
-              placeholder="es. mariorossi
+              placeholder="es. mariorossi"
             >
           </label>
 
