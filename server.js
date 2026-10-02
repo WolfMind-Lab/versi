@@ -4,12 +4,22 @@ import { fileURLToPath } from "url";
 import pg from "pg";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
+import { createHash, randomBytes } from "crypto";
 
 const { Pool } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = Number(process.env.PORT || 10000);
 const SECRET = process.env.JWT_SECRET;
+const APP_URL = String(process.env.APP_URL || "https://versi-yzot.onrender.com").replace(/\/$/, "");
+const mailConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+const mailer = mailConfigured ? nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT || 465),
+  secure: String(process.env.SMTP_SECURE || "true") === "true",
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+}) : null;
 
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL non configurata.");
@@ -27,6 +37,39 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000
 });
+
+
+function tokenHash(value) {
+  return createHash("sha256").update(String(value)).digest("hex");
+}
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[ch]));
+}
+
+async function sendMail({ to, subject, text, html }) {
+  if (!mailer) throw new Error("Servizio email non configurato.");
+  return mailer.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to, subject, text, html
+  });
+}
+
+function verificationMessage(displayName, url) {
+  return {
+    subject: "Conferma la tua email — VERSI",
+    text: `Ciao ${displayName},\n\nconferma il tuo indirizzo email per VERSI aprendo questo link:\n${url}\n\nIl link è valido 24 ore.\n\nSe non hai creato tu questo account, puoi ignorare questa email.`,
+    html: `<p>Ciao ${escapeHTML(displayName)},</p><p>conferma il tuo indirizzo email per VERSI cliccando qui:</p><p><a href="${url}">Conferma email</a></p><p>Il link è valido 24 ore.</p><p>Se non hai creato tu questo account, puoi ignorare questa email.</p>`
+  };
+}
+
+function resetMessage(displayName, url) {
+  return {
+    subject: "Reimposta la password — VERSI",
+    text: `Ciao ${displayName},\n\nper reimpostare la password di VERSI apri questo link:\n${url}\n\nIl link è valido 30 minuti.\n\nSe non hai richiesto tu questa operazione, puoi ignorare questa email.`,
+    html: `<p>Ciao ${escapeHTML(displayName)},</p><p>per reimpostare la password di VERSI clicca qui:</p><p><a href="${url}">Reimposta password</a></p><p>Il link è valido 30 minuti.</p><p>Se non hai richiesto tu questa operazione, puoi ignorare questa email.</p>`
+  };
+}
 
 async function query(text, params = []) {
   return pool.query(text, params);
@@ -131,6 +174,14 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_comments_poem ON comments(poem_id, created_at ASC);
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_collection_items_collection ON collection_items(collection_id, created_at DESC);
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_hash TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires_at TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_hash TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMPTZ;
+    CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token_hash);
+    CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token_hash);
   `);
 }
 
@@ -142,7 +193,7 @@ function normalizeEmail(value) {
 }
 async function publicUser(id) {
   return one(`
-    SELECT id, username, display_name, role, bio, created_at
+    SELECT id, username, display_name, role, bio, email_verified, created_at
     FROM users WHERE id=$1
   `,[id]);
 }
@@ -218,10 +269,23 @@ app.post("/api/register",async(req,res,next)=>{
     if(await one(`SELECT 1 FROM users WHERE username=$1`,[username])) return res.status(409).json({error:"Questo username è già utilizzato."});
     if(await one(`SELECT 1 FROM users WHERE email=$1`,[email])) return res.status(409).json({error:"Questa email è già associata a un account."});
     const hash=await bcrypt.hash(password,12);
-    const created=await one(`INSERT INTO users(username,email,password_hash,display_name,role) VALUES($1,$2,$3,$4,$5) RETURNING id`,[username,email,hash,displayName,role]);
+    const verificationToken=randomBytes(32).toString("hex");
+    const verificationHash=tokenHash(verificationToken);
+    const created=await one(`INSERT INTO users(username,email,password_hash,display_name,role,verification_token_hash,verification_token_expires_at) VALUES($1,$2,$3,$4,$5,$6,NOW()+INTERVAL '24 hours') RETURNING id`,[username,email,hash,displayName,role,verificationHash]);
     const user=await publicUser(created.id);
+    const verifyUrl=`${APP_URL}/?verify=${verificationToken}`;
+    let emailVerificationSent=false;
+    if(mailer) {
+      try {
+        const mail=verificationMessage(displayName,verifyUrl);
+        await sendMail({to:email,...mail});
+        emailVerificationSent=true;
+      } catch(emailError) {
+        console.error("Invio verifica email fallito:",emailError);
+      }
+    }
     const token=jwt.sign({id:user.id,username:user.username},SECRET,{expiresIn:"30d"});
-    res.status(201).json({ok:true,token,user});
+    res.status(201).json({ok:true,token,user,emailVerificationSent});
   } catch(e){next(e);}
 });
 
@@ -233,6 +297,62 @@ app.post("/api/login",async(req,res)=>{
   if(!user || !(await bcrypt.compare(password,user.password_hash))) return res.status(401).json({error:"Email/username o password non corretti."});
   const token=jwt.sign({id:user.id,username:user.username},SECRET,{expiresIn:"30d"});
   res.json({ok:true,token,user:await publicUser(user.id)});
+});
+
+app.post("/api/auth/forgot-password",async(req,res)=>{
+  const email=normalizeEmail(req.body.email);
+  const generic={ok:true,message:"Se l'email è associata a un account, riceverai un link per reimpostare la password."};
+  if(!/^\S+@\S+\.\S+$/.test(email)) return res.json(generic);
+  try {
+    const user=await one(`SELECT id,display_name,email FROM users WHERE email=$1`,[email]);
+    if(!user || !mailer) return res.json(generic);
+    const resetToken=randomBytes(32).toString("hex");
+    await query(`UPDATE users SET reset_token_hash=$1,reset_token_expires_at=NOW()+INTERVAL '30 minutes' WHERE id=$2`,[tokenHash(resetToken),user.id]);
+    const resetUrl=`${APP_URL}/?reset=${resetToken}`;
+    await sendMail({to:user.email,...resetMessage(user.display_name,resetUrl)});
+    res.json(generic);
+  } catch(e) { console.error("Forgot password:",e); res.json(generic); }
+});
+
+app.post("/api/auth/reset-password",async(req,res,next)=>{
+  try {
+    const resetToken=String(req.body.token||"").trim();
+    const password=String(req.body.password||"");
+    const passwordConfirm=String(req.body.passwordConfirm||"");
+    if(!resetToken) return res.status(400).json({error:"Link di recupero non valido."});
+    if(password.length<8) return res.status(400).json({error:"La password deve avere almeno 8 caratteri."});
+    if(password!==passwordConfirm) return res.status(400).json({error:"Le password non coincidono."});
+    const user=await one(`SELECT id FROM users WHERE reset_token_hash=$1 AND reset_token_expires_at>NOW()`,[tokenHash(resetToken)]);
+    if(!user) return res.status(400).json({error:"Il link di recupero non è valido o è scaduto."});
+    const hash=await bcrypt.hash(password,12);
+    await query(`UPDATE users SET password_hash=$1,reset_token_hash=NULL,reset_token_expires_at=NULL WHERE id=$2`,[hash,user.id]);
+    res.json({ok:true,message:"Password aggiornata. Ora puoi accedere a VERSI."});
+  } catch(e){next(e);}
+});
+
+app.get("/api/auth/verify-email",async(req,res,next)=>{
+  try {
+    const verificationToken=String(req.query.token||"").trim();
+    if(!verificationToken) return res.status(400).json({error:"Token di verifica non valido."});
+    const user=await one(`SELECT id FROM users WHERE verification_token_hash=$1 AND verification_token_expires_at>NOW()`,[tokenHash(verificationToken)]);
+    if(!user) return res.status(400).json({error:"Il link di verifica non è valido o è scaduto."});
+    await query(`UPDATE users SET email_verified=TRUE,verification_token_hash=NULL,verification_token_expires_at=NULL WHERE id=$1`,[user.id]);
+    res.json({ok:true,message:"Email verificata. Grazie per aver confermato il tuo indirizzo email."});
+  } catch(e){next(e);}
+});
+
+app.post("/api/auth/resend-verification",auth,async(req,res,next)=>{
+  try {
+    const user=await one(`SELECT id,email,display_name,email_verified FROM users WHERE id=$1`,[req.user.id]);
+    if(!user) return res.status(404).json({error:"Account non trovato."});
+    if(user.email_verified) return res.json({ok:true,message:"La tua email è già verificata."});
+    if(!mailer) return res.status(503).json({error:"Servizio email non configurato."});
+    const verificationToken=randomBytes(32).toString("hex");
+    await query(`UPDATE users SET verification_token_hash=$1,verification_token_expires_at=NOW()+INTERVAL '24 hours' WHERE id=$2`,[tokenHash(verificationToken),user.id]);
+    const verifyUrl=`${APP_URL}/?verify=${verificationToken}`;
+    await sendMail({to:user.email,...verificationMessage(user.display_name,verifyUrl)});
+    res.json({ok:true,message:"Nuova email di verifica inviata."});
+  } catch(e){next(e);}
 });
 
 app.get("/api/me",auth,async(req,res)=>{
