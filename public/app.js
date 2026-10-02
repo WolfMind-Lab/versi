@@ -739,10 +739,23 @@ async function forgotPassword() {
       button.textContent = "Invio in corso…";
     }
 
-    const data = await api("/api/auth/forgot-password", {
-      method: "POST",
-      body: JSON.stringify({ email })
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    let data;
+    try {
+      data = await api("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        throw new Error("Il servizio email sta impiegando troppo tempo. Riprova tra poco.");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     showAuthMessage(
       data.message || "Se l'account esiste, riceverai un'email con le istruzioni.",
