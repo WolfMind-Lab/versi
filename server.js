@@ -18,7 +18,10 @@ const mailer = mailConfigured ? nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT || 465),
   secure: String(process.env.SMTP_SECURE || "true") === "true",
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000
 }) : null;
 
 if (!process.env.DATABASE_URL) {
@@ -319,8 +322,12 @@ app.post("/api/auth/forgot-password",async(req,res)=>{
     await query(`UPDATE users SET reset_token_hash=$1,reset_token_expires_at=NOW()+INTERVAL '30 minutes' WHERE id=$2`,[tokenHash(resetToken),user.id]);
     const resetUrl=`${APP_URL}/?reset=${resetToken}`;
     await sendMail({to:user.email,...resetMessage(user.display_name,resetUrl)});
+    console.log(`Email recupero password inviata a ${user.email}`);
     res.json(generic);
-  } catch(e) { console.error("Forgot password:",e); res.json(generic); }
+  } catch(e) {
+    console.error("Forgot password email error:", e?.message || e);
+    res.json(generic);
+  }
 });
 
 app.post("/api/auth/reset-password",async(req,res,next)=>{
@@ -602,7 +609,7 @@ app.get("/api/profile",auth,async(req,res)=>{
 app.get("/api/health",async(req,res)=>{
   try {
     const r=await one(`SELECT NOW() AS now`);
-    res.json({ok:true,database:"postgresql",time:r.now});
+    res.json({ok:true,database:"postgresql",smtpConfigured:mailConfigured,time:r.now});
   }catch(e){res.status(503).json({ok:false,database:"unavailable"});}
 });
 
