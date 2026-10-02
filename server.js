@@ -10,6 +10,7 @@ import { createHash, randomBytes } from "crypto";
 const { Pool } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+app.disable("x-powered-by");
 const PORT = Number(process.env.PORT || 10000);
 const SECRET = process.env.JWT_SECRET;
 const APP_URL = String(process.env.APP_URL || "https://versi-yzot.onrender.com").replace(/\/$/, "");
@@ -19,6 +20,8 @@ const mailer = mailConfigured ? nodemailer.createTransport({
   port: Number(process.env.SMTP_PORT || 465),
   secure: String(process.env.SMTP_SECURE || "true") === "true",
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  disableFileAccess: true,
+  disableUrlAccess: true,
   connectionTimeout: 10000,
   greetingTimeout: 10000,
   socketTimeout: 15000
@@ -96,6 +99,13 @@ async function many(text, params = []) {
 }
 
 app.use(express.json({ limit: "1mb" }));
+app.use((req,res,next)=>{
+  res.setHeader("X-Content-Type-Options","nosniff");
+  res.setHeader("Referrer-Policy","strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy","camera=(), microphone=(), geolocation=()");
+  if (req.path.startsWith("/api/")) res.setHeader("Cache-Control","no-store");
+  next();
+});
 app.use(express.static(path.join(__dirname, "public")));
 
 const MOODS = new Set(["Amore","Nostalgia","Solitudine","Rinascita","Felicità","Dolore","Libertà"]);
@@ -273,8 +283,9 @@ app.post("/api/register",async(req,res,next)=>{
     const passwordConfirm=String(req.body.passwordConfirm||"");
     const role=req.body.role;
     if(!displayName) return res.status(400).json({error:"Inserisci il nome visualizzato."});
+    if(displayName.length>60) return res.status(400).json({error:"Il nome visualizzato può contenere al massimo 60 caratteri."});
     if(!/^[a-z0-9._-]{3,24}$/.test(username)) return res.status(400).json({error:"Lo username deve contenere 3-24 caratteri: lettere, numeri, punto, trattino o underscore."});
-    if(!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({error:"Inserisci un indirizzo email valido."});
+    if(!/^\S+@\S+\.\S+$/.test(email) || email.length>254) return res.status(400).json({error:"Inserisci un indirizzo email valido."});
     if(password.length<8) return res.status(400).json({error:"La password deve avere almeno 8 caratteri."});
     if(password!==passwordConfirm) return res.status(400).json({error:"Le password non coincidono."});
     if(!["writer","reader"].includes(role)) return res.status(400).json({error:"Scegli se vuoi essere Scrittore o Lettore."});
@@ -615,6 +626,26 @@ app.get("/api/health",async(req,res)=>{
 
 app.use("/api",(error,req,res,next)=>{
   console.error(error);
+
+  if (error?.type === "entity.too.large") {
+    return res.status(413).json({error:"La richiesta è troppo grande."});
+  }
+
+  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
+    return res.status(400).json({error:"La richiesta non è valida."});
+  }
+
+  if (error?.code === "23505") {
+    const detail = String(error.detail || "");
+    if (detail.includes("username")) {
+      return res.status(409).json({error:"Questo username è già utilizzato."});
+    }
+    if (detail.includes("email")) {
+      return res.status(409).json({error:"Questa email è già associata a un account."});
+    }
+    return res.status(409).json({error:"Questa operazione crea un duplicato non consentito."});
+  }
+
   res.status(500).json({error:"Abbiamo avuto un problema temporaneo. Riprova tra poco."});
 });
 
