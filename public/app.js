@@ -311,7 +311,7 @@ function renderAuth() {
 
           <button
             class="secondary"
-            onclick="forgotPassword()"
+            onclick="showForgotPassword()"
           >
             Password dimenticata?
           </button>
@@ -321,6 +321,49 @@ function renderAuth() {
             onclick="showRegister()"
           >
             Crea account
+          </button>
+
+        </div>
+
+        <div
+          id="forgotPasswordBox"
+          class="auth-form"
+          style="display:none"
+        >
+
+          <h2>Password dimenticata?</h2>
+
+          <p class="auth-intro">
+            Inserisci l'email associata al tuo account VERSI.
+            Se l'account esiste, riceverai un link per creare una nuova password.
+          </p>
+
+          <label>
+            Email
+
+            <input
+              id="forgotEmail"
+              type="email"
+              autocomplete="email"
+              placeholder="es. nome@email.com"
+            >
+          </label>
+
+          <div id="forgotMessage"></div>
+
+          <button
+            id="forgotSubmit"
+            class="primary"
+            onclick="forgotPassword()"
+          >
+            Invia link di recupero
+          </button>
+
+          <button
+            class="secondary"
+            onclick="backToLogin()"
+          >
+            Torna al login
           </button>
 
         </div>
@@ -661,22 +704,59 @@ async function login() {
   }
 }
 
+function showForgotPassword() {
+  const loginBox = document.getElementById("loginBox");
+  const forgotBox = document.getElementById("forgotPasswordBox");
+  if (!loginBox || !forgotBox) return;
+  loginBox.style.display = "none";
+  forgotBox.style.display = "block";
+  const input = document.getElementById("forgotEmail");
+  input?.focus();
+}
+
+function backToLogin() {
+  const loginBox = document.getElementById("loginBox");
+  const forgotBox = document.getElementById("forgotPasswordBox");
+  if (!loginBox || !forgotBox) return;
+  forgotBox.style.display = "none";
+  loginBox.style.display = "block";
+  showAuthMessage("", "error", "forgotMessage");
+}
+
 async function forgotPassword() {
-  const email = window.prompt("Inserisci l'email del tuo account VERSI:");
-  if (email === null) return;
-  const value = email.trim();
-  if (!value) {
-    showAuthMessage("Inserisci un indirizzo email.", "error", "loginMessage");
+  const email = document.getElementById("forgotEmail")?.value.trim();
+  showAuthMessage("", "error", "forgotMessage");
+
+  if (!email) {
+    showAuthMessage("Inserisci l'indirizzo email del tuo account.", "error", "forgotMessage");
     return;
   }
+
   try {
+    const button = document.getElementById("forgotSubmit");
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Invio in corso…";
+    }
+
     const data = await api("/api/auth/forgot-password", {
       method: "POST",
-      body: JSON.stringify({ email: value })
+      body: JSON.stringify({ email })
     });
-    showAuthMessage(data.message, "success", "loginMessage");
+
+    showAuthMessage(
+      data.message || "Se l'account esiste, riceverai un'email con le istruzioni.",
+      "success",
+      "forgotMessage"
+    );
   } catch (error) {
-    showAuthMessage(error.message, "error", "loginMessage");
+    showAuthMessage(error.message, "error", "forgotMessage");
+  } finally {
+    const button = document.getElementById("forgotSubmit");
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Invia link di recupero";
+    }
   }
 }
 
