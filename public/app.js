@@ -2898,6 +2898,16 @@ async function loadActivity() {
 ========================= */
 
 function go(id) {
+  // Cambiare sezione deve sempre aprire la nuova schermata dall'inizio.
+  // Questo evita che iOS Safari/Android mantengano lo scroll della schermata precedente.
+  if (document.activeElement && typeof document.activeElement.blur === "function") {
+    document.activeElement.blur();
+  }
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
   // 1. Nasconde tutte le schermate
   document
     .querySelectorAll(
@@ -2924,6 +2934,12 @@ function go(id) {
   targetScreen.classList.add(
     "active"
   );
+
+  // Safari può ricalcolare la posizione dopo il cambio di altezza del DOM.
+  // Riporta quindi la nuova schermata in cima anche dopo il reflow.
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  });
 
   // 3. Rimuove lo stato attivo da tutti
   //    i pulsanti della navigazione

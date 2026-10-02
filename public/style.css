@@ -40,12 +40,14 @@ button:disabled{
 
 body{
   padding-bottom:calc(108px + env(safe-area-inset-bottom));
-  overscroll-behavior-x:none
+  overscroll-behavior-x:none;
+  overscroll-behavior-y:auto
 }
 
 #app{
   min-height:100vh;
-  min-height:100svh
+  min-height:100svh;
+  min-height:100dvh
 }
 
 .logo,.brand,h1,h2,h3,.poem-card h2,.modal-heading h2,.profile-header h1{
@@ -93,7 +95,7 @@ body{
 
 .screen{
   display:none!important;
-  min-height:calc(100vh - 66px)
+  min-height:0
 }
 
 .screen.active{
@@ -101,7 +103,8 @@ body{
 }
 
 .screen-inner{
-  padding:22px 18px 120px
+  padding:22px 18px 120px;
+  min-height:0
 }
 
 .eyebrow{
@@ -907,8 +910,13 @@ body{
 /* EMPTY / LOADING */
 
 .empty-state{
+  min-height:280px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
   text-align:center;
-  padding:48px 18px;
+  padding:34px 18px;
   color:var(--muted)
 }
 
@@ -1300,6 +1308,12 @@ body{
   border-color:var(--accent);
   background:var(--accent-soft)
 }
+
+/* MOBILE LAYOUT HARDENING */
+img,svg,video,canvas{max-width:100%;height:auto}
+input,textarea,select,button{max-width:100%}
+.search-box input{min-width:0}
+.poem-card,.notification,.profile-header,.create-card,.challenge,.sheet{max-width:100%}
 
 /* RESPONSIVE */
 
