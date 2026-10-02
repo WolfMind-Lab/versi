@@ -55,6 +55,15 @@ async function sendMail({ to, subject, text, html }) {
   });
 }
 
+if (mailer) {
+  console.log(`SMTP configurato: ${process.env.SMTP_USER}`);
+  mailer.verify()
+    .then(() => console.log("SMTP verificato: connessione Gmail disponibile."))
+    .catch(error => console.error("SMTP non verificato:", error.message));
+} else {
+  console.warn("SMTP non configurato: recupero password e verifica email non potranno inviare messaggi.");
+}
+
 function verificationMessage(displayName, url) {
   return {
     subject: "Conferma la tua email — VERSI",
