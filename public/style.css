@@ -1179,11 +1179,13 @@ body{
   display:flex;
   align-items:flex-start;
   justify-content:center;
-  padding:24px 16px calc(28px + env(safe-area-inset-bottom));
+  padding:24px 16px calc(48px + env(safe-area-inset-bottom));
   overflow-x:hidden;
   overflow-y:auto;
   -webkit-overflow-scrolling:touch;
-  overscroll-behavior-y:contain
+  overscroll-behavior-y:contain;
+  scroll-padding-top:24px;
+  scroll-padding-bottom:180px
 }
 
 .auth-card{
@@ -1258,6 +1260,13 @@ body{
 
 .auth-form > button{
   width:100%;
+  min-width:0;
+  box-sizing:border-box;
+}
+
+.auth-form input{
+  scroll-margin-top:24px;
+  scroll-margin-bottom:180px;
 }
 
 .auth-form input:focus,
@@ -1288,6 +1297,9 @@ body{
 
 .role{
   display:grid;
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
   gap:4px;
   text-align:left;
   border:1px solid var(--line);
@@ -1404,6 +1416,36 @@ input,textarea,select,button{max-width:100%}
 }
 
 @media(max-width:420px){
+  .auth-card{
+    width:100%;
+    max-width:450px;
+  }
+
+  .auth-form{
+    gap:10px;
+  }
+
+  .roles{
+    gap:8px;
+  }
+
+  .role{
+    padding:12px;
+  }
+
+  .role strong{
+    font-size:14px;
+  }
+
+  .role small{
+    font-size:13px;
+    line-height:1.35;
+  }
+
+  .auth-form > button{
+    min-height:50px;
+  }
+
   .bottom-nav{
     left:7px;
     right:7px;
