@@ -4,7 +4,6 @@ import { fileURLToPath } from "url";
 import pg from "pg";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
 import { createHash, randomBytes } from "crypto";
 
 const { Pool } = pg;
@@ -14,18 +13,8 @@ app.disable("x-powered-by");
 const PORT = Number(process.env.PORT || 10000);
 const SECRET = process.env.JWT_SECRET;
 const APP_URL = String(process.env.APP_URL || "https://versi-yzot.onrender.com").replace(/\/$/, "");
-const mailConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-const mailer = mailConfigured ? nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 465),
-  secure: String(process.env.SMTP_SECURE || "true") === "true",
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  disableFileAccess: true,
-  disableUrlAccess: true,
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000
-}) : null;
+const resendConfigured = !!process.env.RESEND_API_KEY;
+const RESEND_FROM = String(process.env.RESEND_FROM || "Versi Official <noreply@versisocial.it>").trim();
 
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL non configurata.");
@@ -54,36 +43,26 @@ function escapeHTML(value) {
 }
 
 async function sendMail({ to, subject, text, html }) {
-  if (!mailer) throw new Error("Servizio email non configurato.");
-  return mailer.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to, subject, text, html
-  });
+  if (!resendConfigured) throw new Error("Servizio email Resend non configurato.");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, text, html }),
+      signal: controller.signal
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.message || payload?.error || `Resend HTTP ${response.status}`);
+    return payload;
+  } finally { clearTimeout(timeout); }
 }
 
-if (mailer) {
-  console.log(`SMTP configurato: ${process.env.SMTP_USER}`);
-  mailer.verify()
-    .then(async () => {
-      console.log("SMTP verificato: connessione Gmail disponibile.");
-      if (String(process.env.SMTP_TEST_ON_START || "false").toLowerCase() === "true") {
-        try {
-          const testTo = process.env.SMTP_USER;
-          const result = await sendMail({
-            to: testTo,
-            subject: "Test SMTP VERSI",
-            text: "Questo è un test automatico della configurazione Gmail SMTP di VERSI.",
-            html: "<p>Questo è un test automatico della configurazione Gmail SMTP di <strong>VERSI</strong>.</p>"
-          });
-          console.log(`TEST SMTP RIUSCITO: email inviata a ${testTo}. Message-ID: ${result?.messageId || "n/d"}`);
-        } catch (error) {
-          console.error("TEST SMTP FALLITO:", error?.message || error);
-        }
-      }
-    })
-    .catch(error => console.error("SMTP non verificato:", error.message));
+if (resendConfigured) {
+  console.log(`Resend API configurata. Mittente: ${RESEND_FROM}`);
 } else {
-  console.warn("SMTP non configurato: recupero password e verifica email non potranno inviare messaggi.");
+  console.warn("Resend API non configurata: recupero password e verifica email non potranno inviare messaggi.");
 }
 
 function verificationMessage(displayName, url) {
@@ -314,7 +293,7 @@ app.post("/api/register",async(req,res,next)=>{
     const user=await publicUser(created.id);
     const verifyUrl=`${APP_URL}/?verify=${verificationToken}`;
     let emailVerificationSent=false;
-    if(mailer) {
+    if(resendConfigured) {
       try {
         const mail=verificationMessage(displayName,verifyUrl);
         await sendMail({to:email,...mail});
@@ -344,7 +323,7 @@ app.post("/api/auth/forgot-password",async(req,res)=>{
   if(!/^\S+@\S+\.\S+$/.test(email)) return res.json(generic);
   try {
     const user=await one(`SELECT id,display_name,email FROM users WHERE email=$1`,[email]);
-    if(!user || !mailer) return res.json(generic);
+    if(!user || !resendConfigured) return res.json(generic);
     const resetToken=randomBytes(32).toString("hex");
     await query(`UPDATE users SET reset_token_hash=$1,reset_token_expires_at=NOW()+INTERVAL '30 minutes' WHERE id=$2`,[tokenHash(resetToken),user.id]);
     const resetUrl=`${APP_URL}/?reset=${resetToken}`;
@@ -389,7 +368,7 @@ app.post("/api/auth/resend-verification",auth,async(req,res,next)=>{
     const user=await one(`SELECT id,email,display_name,email_verified FROM users WHERE id=$1`,[req.user.id]);
     if(!user) return res.status(404).json({error:"Account non trovato."});
     if(user.email_verified) return res.json({ok:true,message:"La tua email è già verificata."});
-    if(!mailer) return res.status(503).json({error:"Servizio email non configurato."});
+    if(!resendConfigured) return res.status(503).json({error:"Servizio email non configurato."});
     const verificationToken=randomBytes(32).toString("hex");
     await query(`UPDATE users SET verification_token_hash=$1,verification_token_expires_at=NOW()+INTERVAL '24 hours' WHERE id=$2`,[tokenHash(verificationToken),user.id]);
     const verifyUrl=`${APP_URL}/?verify=${verificationToken}`;
@@ -636,7 +615,7 @@ app.get("/api/profile",auth,async(req,res)=>{
 app.get("/api/health",async(req,res)=>{
   try {
     const r=await one(`SELECT NOW() AS now`);
-    res.json({ok:true,database:"postgresql",smtpConfigured:mailConfigured,time:r.now});
+    res.json({ok:true,database:"postgresql",resendConfigured,time:r.now});
   }catch(e){res.status(503).json({ok:false,database:"unavailable"});}
 });
 
