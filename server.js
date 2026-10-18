@@ -185,6 +185,21 @@ async function initDb() {
       read INTEGER DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+    
+ALTER TABLE notifications
+ADD COLUMN IF NOT EXISTS message TEXT;
+
+UPDATE notifications
+SET message = CASE
+  WHEN type = 'like' THEN 'ha messo mi piace a una tua poesia.'
+  WHEN type = 'follow' THEN 'ha iniziato a seguirti.'
+  WHEN type = 'comment' THEN 'ha commentato una tua poesia.'
+  ELSE 'ha interagito con una tua poesia.'
+END
+WHERE message IS NULL;
+
+ALTER TABLE notifications
+ALTER COLUMN message SET NOT NULL;
 
     CREATE INDEX IF NOT EXISTS idx_poems_created ON poems(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_poems_user ON poems(user_id, created_at DESC);
@@ -486,10 +501,17 @@ async function toggle(table,userId,poemId) {
 
     if(table==="likes" && inserted && Number(p.user_id)!==Number(userId)) {
       await query(
-        `INSERT INTO notifications(user_id,actor_id,type,poem_id)
-         VALUES($1,$2,$3,$4)`,
-        [p.user_id,userId,"like",poemId]
-      );
+  `INSERT INTO notifications
+   (user_id, actor_id, type, poem_id, message)
+   VALUES($1, $2, $3, $4, $5)`,
+  [
+    p.user_id,
+    userId,
+    "like",
+    poemId,
+    "ha messo mi piace a una tua poesia."
+  ]
+);
     }
   }
 
@@ -611,10 +633,16 @@ app.post("/api/users/:id/follow",auth,async(req,res,next)=>{
 
     if(inserted) {
       await query(
-        `INSERT INTO notifications(user_id,actor_id,type)
-         VALUES($1,$2,$3)`,
-        [target,actorId,"follow"]
-      );
+  `INSERT INTO notifications
+   (user_id, actor_id, type, message)
+   VALUES($1, $2, $3, $4)`,
+  [
+    target,
+    actorId,
+    "follow",
+    "ha iniziato a seguirti."
+  ]
+);
     }
 
     res.json({ok:true,following:!!inserted});
@@ -641,7 +669,20 @@ app.post("/api/poems/:id/comments",auth,async(req,res,next)=>{
     if(!body) return res.status(400).json({error:"Scrivi un commento prima di inviare."});
     if(body.length>1000) return res.status(400).json({error:"Il commento è troppo lungo."});
     const c=await one(`INSERT INTO comments(user_id,poem_id,body) VALUES($1,$2,$3) RETURNING id`,[req.user.id,req.params.id,body]);
-    if(Number(p.user_id)!==Number(req.user.id)) await query(`INSERT INTO notifications(user_id,actor_id,type,poem_id) VALUES($1,$2,$3,$4)`,[p.user_id,req.user.id,"comment",req.params.id]);
+  if(Number(p.user_id)!==Number(req.user.id)) {
+  await query(
+    `INSERT INTO notifications
+     (user_id, actor_id, type, poem_id, message)
+     VALUES($1, $2, $3, $4, $5)`,
+    [
+      p.user_id,
+      req.user.id,
+      "comment",
+      req.params.id,
+      "ha commentato una tua poesia."
+    ]
+  );
+}
     const comment=await one(`
       SELECT c.id,c.body,c.created_at,u.username,u.display_name
       FROM comments c JOIN users u ON u.id=c.user_id WHERE c.id=$1
