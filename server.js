@@ -455,16 +455,47 @@ app.delete("/api/poems/:id",auth,async(req,res,next)=>{
   } catch(e){next(e);}
 });
 
+
 async function toggle(table,userId,poemId) {
   const allowed=["likes","saves","favorites"];
   if(!allowed.includes(table)) return {error:"Operazione non valida."};
+
   const p=await one(`SELECT * FROM poems WHERE id=$1`,[poemId]);
-  if(!p || !(await canViewPoem(p,userId))) return {error:"Poesia non disponibile."};
-  const exists=await one(`SELECT 1 FROM ${table} WHERE user_id=$1 AND poem_id=$2`,[userId,poemId]);
-  if(exists) await query(`DELETE FROM ${table} WHERE user_id=$1 AND poem_id=$2`,[userId,poemId]);
-  else await query(`INSERT INTO ${table}(user_id,poem_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,[userId,poemId]);
+  if(!p || !(await canViewPoem(p,userId))) {
+    return {error:"Poesia non disponibile."};
+  }
+
+  const exists=await one(
+    `SELECT 1 FROM ${table} WHERE user_id=$1 AND poem_id=$2`,
+    [userId,poemId]
+  );
+
+  if(exists) {
+    await query(
+      `DELETE FROM ${table} WHERE user_id=$1 AND poem_id=$2`,
+      [userId,poemId]
+    );
+  } else {
+    const inserted=await one(
+      `INSERT INTO ${table}(user_id,poem_id)
+       VALUES($1,$2)
+       ON CONFLICT DO NOTHING
+       RETURNING poem_id`,
+      [userId,poemId]
+    );
+
+    if(table==="likes" && inserted && Number(p.user_id)!==Number(userId)) {
+      await query(
+        `INSERT INTO notifications(user_id,actor_id,type,poem_id)
+         VALUES($1,$2,$3,$4)`,
+        [p.user_id,userId,"like",poemId]
+      );
+    }
+  }
+
   return {poem:await poem(poemId,userId)};
 }
+
 for(const [route,table] of [["like","likes"],["save","saves"],["favorite","favorites"]]){
   app.post(`/api/poems/:id/${route}`,auth,async(req,res,next)=>{
     try {
@@ -541,22 +572,55 @@ app.delete("/api/collections/:id",auth,async(req,res,next)=>{
   }catch(e){next(e);}
 });
 
+
 app.post("/api/users/:id/follow",auth,async(req,res,next)=>{
   try {
     const target=Number(req.params.id);
-    if(!Number.isInteger(target)) return res.status(400).json({error:"Utente non valido."});
-    if(target===req.user.id) return res.status(400).json({error:"Non puoi seguire te stesso."});
-    if(!await publicUser(target)) return res.status(404).json({error:"Utente non trovato."});
-    const exists=await isFollowing(req.user.id,target);
-    if(exists) {
-      await query(`DELETE FROM follows WHERE follower_id=$1 AND following_id=$2`,[req.user.id,target]);
-    } else {
-      await query(`INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,[req.user.id,target]);
-      await query(`INSERT INTO notifications(user_id,actor_id,type) VALUES($1,$2,$3)`,[target,req.user.id,"follow"]);
+    const actorId=Number(req.user.id);
+
+    if(!Number.isInteger(target) || target<=0) {
+      return res.status(400).json({error:"Utente non valido."});
     }
-    res.json({ok:true,following:!exists});
+
+    if(target===actorId) {
+      return res.status(400).json({error:"Non puoi seguire te stesso."});
+    }
+
+    if(!await publicUser(target)) {
+      return res.status(404).json({error:"Utente non trovato."});
+    }
+
+    const exists=await isFollowing(actorId,target);
+
+    if(exists) {
+      await query(
+        `DELETE FROM follows WHERE follower_id=$1 AND following_id=$2`,
+        [actorId,target]
+      );
+
+      return res.json({ok:true,following:false});
+    }
+
+    const inserted=await one(
+      `INSERT INTO follows(follower_id,following_id)
+       VALUES($1,$2)
+       ON CONFLICT DO NOTHING
+       RETURNING follower_id`,
+      [actorId,target]
+    );
+
+    if(inserted) {
+      await query(
+        `INSERT INTO notifications(user_id,actor_id,type)
+         VALUES($1,$2,$3)`,
+        [target,actorId,"follow"]
+      );
+    }
+
+    res.json({ok:true,following:!!inserted});
   }catch(e){next(e);}
 });
+
 
 app.get("/api/poems/:id/comments",auth,async(req,res,next)=>{
   try {
