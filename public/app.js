@@ -2899,12 +2899,16 @@ async function loadActivity() {
                       )}
                     </strong>
 
+                    
                     <p>
                       ${
-                        notification.type ===
-                        "follow"
+                        notification.type === "follow"
                           ? "ha iniziato a seguirti."
-                          : "ha interagito con una tua poesia."
+                          : notification.type === "like"
+                            ? "ha messo mi piace a una tua poesia."
+                            : notification.type === "comment"
+                              ? "ha commentato una tua poesia."
+                              : "ha interagito con una tua poesia."
                       }
                     </p>
 
