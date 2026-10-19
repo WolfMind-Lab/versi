@@ -32,6 +32,17 @@ const registerLimiter = rateLimit({
   }
 });
 
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    ok: true,
+    message: "Se l'email è associata a un account, riceverai un link per reimpostare la password."
+  }
+});
+
 const PORT = Number(process.env.PORT || 10000);
 const SECRET = process.env.JWT_SECRET;
 const APP_URL = String(process.env.APP_URL || "https://versi-yzot.onrender.com").replace(/\/$/, "");
@@ -354,7 +365,7 @@ app.post("/api/login", loginLimiter, async (req, res) => {
   res.json({ok:true,token,user:await publicUser(user.id)});
 });
 
-app.post("/api/auth/forgot-password",async(req,res)=>{
+app.post("/api/auth/forgot-password", forgotPasswordLimiter, async (req, res) => {
   const email=normalizeEmail(req.body.email);
   const generic={ok:true,message:"Se l'email è associata a un account, riceverai un link per reimpostare la password."};
   if(!/^\S+@\S+\.\S+$/.test(email)) return res.json(generic);
