@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
@@ -10,6 +11,17 @@ const { Pool } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.disable("x-powered-by");
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    error: "Troppi tentativi di accesso. Riprova tra 15 minuti."
+  }
+});
+
 const PORT = Number(process.env.PORT || 10000);
 const SECRET = process.env.JWT_SECRET;
 const APP_URL = String(process.env.APP_URL || "https://versi-yzot.onrender.com").replace(/\/$/, "");
@@ -322,7 +334,7 @@ app.post("/api/register",async(req,res,next)=>{
   } catch(e){next(e);}
 });
 
-app.post("/api/login",async(req,res)=>{
+app.post("/api/login", loginLimiter, async (req, res) => {
   const identifier=String(req.body.identifier||"").trim().toLowerCase();
   const password=String(req.body.password||"");
   if(!identifier||!password) return res.status(400).json({error:"Inserisci email/username e password."});
