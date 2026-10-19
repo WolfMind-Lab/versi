@@ -22,6 +22,16 @@ const loginLimiter = rateLimit({
   }
 });
 
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    error: "Troppe richieste di registrazione. Riprova tra un'ora."
+  }
+});
+
 const PORT = Number(process.env.PORT || 10000);
 const SECRET = process.env.JWT_SECRET;
 const APP_URL = String(process.env.APP_URL || "https://versi-yzot.onrender.com").replace(/\/$/, "");
@@ -296,7 +306,7 @@ async function profilePayload(userId,viewerId) {
   return {...user,...await userStats(userId),followed:await isFollowing(viewerId,userId),poems};
 }
 
-app.post("/api/register",async(req,res,next)=>{
+app.post("/api/register", registerLimiter, async (req, res, next) => {
   try {
     const displayName=String(req.body.displayName||"").trim();
     const username=normalizeUsername(req.body.username);
